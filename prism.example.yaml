@@ -1,0 +1,29 @@
+# Prism configuration. Copy to prism.yaml and edit.
+# Model versions are NOT hardcoded: the CLI engines use your subscription's current
+# default. `effort` is the per-reviewer reasoning knob (ADR-0006).
+
+engines:
+  claude-cli:
+    kind: claude-cli
+  codex-cli:
+    kind: codex-cli
+  # Optional pay-per-token fallback (deferred; config can express it already):
+  # anthropic:
+  #   kind: anthropic-api
+  #   key_env: ANTHROPIC_API_KEY
+  #   model: claude-opus-4-8
+
+reviewers:
+  code_quality:
+    engine: claude-cli
+    effort: medium
+  security:
+    engine: codex-cli   # spread across both subscriptions to ease rate limits
+    effort: high
+
+coordinator:
+  engine: claude-cli
+  effort: high
+
+policy:
+  fail_on: significant_concerns   # nonzero exit / block only at this decision
