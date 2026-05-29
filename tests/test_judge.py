@@ -62,6 +62,13 @@ def test_judge_feeds_input_findings_to_the_engine() -> None:
     assert "UNIQUE-ID-123" in engine.prompts[0]
 
 
+def test_judge_parses_verdict_wrapped_in_prose() -> None:
+    engine = CaptureEngine([f"Here is my verdict:\n{_verdict('approved', [])}\nThanks."])
+    result = FanOutCoordinator().judge([], context="ctx", engine=engine)
+    assert result.decision is Decision.APPROVED
+    assert engine.calls == 1
+
+
 def test_judge_repair_retry_then_valid() -> None:
     engine = CaptureEngine(["not json", _verdict("approved", [])])
     result = FanOutCoordinator().judge([], context="ctx", engine=engine)

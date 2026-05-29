@@ -53,6 +53,14 @@ def test_handles_code_fenced_json() -> None:
     assert run_reviewer("security", _CFG, eng, context="ctx") == []
 
 
+def test_parses_findings_wrapped_in_prose() -> None:
+    # Models sometimes wrap the JSON in prose; extraction should recover it (no retry).
+    eng = FakeEngine([f"Sure! Here are the findings:\n{_finding_json()}\nHope that helps."])
+    findings = run_reviewer("security", _CFG, eng, context="ctx")
+    assert len(findings) == 1
+    assert eng.calls == 1
+
+
 def test_empty_array_is_no_findings() -> None:
     eng = FakeEngine(["[]"])
     assert run_reviewer("security", _CFG, eng, context="ctx") == []
