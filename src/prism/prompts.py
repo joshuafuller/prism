@@ -41,6 +41,11 @@ def sanitize_context(text: str) -> str:
     return _BOUNDARY_RE.sub("", text)
 
 
+def prompt_exists(reviewer: str) -> bool:
+    """Whether a reviewer has a prompt file at ``agents/<reviewer>.md``."""
+    return (AGENTS_DIR / f"{reviewer}.md").is_file()
+
+
 def _read_markdown(name: str) -> str:
     return (AGENTS_DIR / f"{name}.md").read_text()
 

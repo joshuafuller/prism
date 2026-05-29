@@ -25,6 +25,7 @@ from prism.diff.source import GitDiffSource
 from prism.engines.base import Effort, Engine
 from prism.engines.registry import build_engines
 from prism.findings import ReviewResult
+from prism.prompts import prompt_exists
 from prism.reporter import to_markdown
 from prism.risk import RiskTier, assess_risk_tier
 from prism.telemetry import emit, record_from_result
@@ -102,6 +103,12 @@ def run_local_review(
         else:
             reason = f"not run: requires '{rc.min_tier}' tier (diff is '{tier}')"
             tier_skipped.append((name, reason))
+
+    # A missing prompt is a config error — fail loudly rather than silently skipping the
+    # reviewer at runtime (prism-4gf.32; distinct from genuine runtime skips).
+    missing = [job.name for job in jobs if not prompt_exists(job.name)]
+    if missing:
+        raise ValueError(f"missing reviewer prompt(s): {missing} — add agents/<name>.md for each")
 
     coordinator = FanOutCoordinator(per_reviewer_timeout=config.overall_timeout)
     fanout = coordinator.gather_findings(jobs, context)
