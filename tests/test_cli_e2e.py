@@ -111,6 +111,26 @@ def test_trivial_diff_skips_higher_tier_reviewers(git_repo: Path, tmp_path: Path
     assert "security" in report  # reported, not silently dropped (ADR-0012/0013)
 
 
+def test_run_local_review_emits_telemetry(git_repo: Path) -> None:
+    _repo_with_change(git_repo)
+    engine = ScriptedEngine()
+    cli.run_local_review(
+        load_config(EXAMPLE),
+        target="main",
+        repo=git_repo,
+        engines={"claude-cli": engine, "codex-cli": engine},
+    )
+    tel = git_repo / ".prism" / "telemetry.jsonl"
+    record = json.loads(tel.read_text().strip().splitlines()[-1])
+    assert "tier" in record
+    assert record["decision"] in {
+        "approved",
+        "approved_with_comments",
+        "minor_issues",
+        "significant_concerns",
+    }
+
+
 def test_main_exits_1_on_significant_concerns(monkeypatch) -> None:
     blocked = ReviewResult(findings=[], decision=Decision.SIGNIFICANT_CONCERNS, summary="bad")
     monkeypatch.setattr(cli, "run_local_review", lambda *a, **k: blocked)
