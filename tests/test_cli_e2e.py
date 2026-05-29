@@ -162,6 +162,15 @@ def test_ast_risk_escalates_a_tiny_dangerous_diff(git_repo: Path, tmp_path: Path
     assert security.calls >= 1  # AST escalated trivial->full, so security ran
 
 
+def test_telemetry_excludes_failed_reviewer_from_run(git_repo: Path) -> None:
+    _repo_with_change(git_repo)  # trivial diff -> all default-tier reviewers run
+    engines = {"claude-cli": ScriptedEngine(), "codex-cli": FailingEngine()}  # security fails
+    cli.run_local_review(load_config(EXAMPLE), target="main", repo=git_repo, engines=engines)
+    rec = json.loads((git_repo / ".prism" / "telemetry.jsonl").read_text().strip().splitlines()[-1])
+    assert "security" in rec["reviewers_skipped"]
+    assert "security" not in rec["reviewers_run"]  # failed -> not counted as run
+
+
 def test_main_exits_1_on_significant_concerns(monkeypatch) -> None:
     blocked = ReviewResult(findings=[], decision=Decision.SIGNIFICANT_CONCERNS, summary="bad")
     monkeypatch.setattr(cli, "run_local_review", lambda *a, **k: blocked)
