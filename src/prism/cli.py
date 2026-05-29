@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -72,6 +73,7 @@ def run_local_review(
     engines: dict[str, Engine] | None = None,
     provider: VCSProvider | None = None,
     post_pr: int | None = None,
+    telemetry_path: Path | str | None = None,
 ) -> ReviewResult:
     """Run a full local review and return the judged result (engines injectable for tests)."""
     start = time.perf_counter()
@@ -128,7 +130,11 @@ def run_local_review(
         json.dumps([f.model_dump(mode="json") for f in result.findings], indent=2)
     )
 
-    # Fire-and-forget telemetry (never breaks the review).
+    # Fire-and-forget telemetry (never breaks the review). Path precedence:
+    # explicit arg > PRISM_TELEMETRY_PATH env (for a global, accumulating log) > repo .prism/.
+    tel_path = (
+        telemetry_path or os.environ.get("PRISM_TELEMETRY_PATH") or prism_dir / "telemetry.jsonl"
+    )
     emit(
         record_from_result(
             result,
@@ -139,7 +145,7 @@ def run_local_review(
             reviewers_skipped=[name for name, _ in skipped],
             duration_s=time.perf_counter() - start,
         ),
-        prism_dir / "telemetry.jsonl",
+        tel_path,
     )
 
     if post_pr is not None:
