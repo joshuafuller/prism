@@ -44,19 +44,22 @@ class ClaudeCLIEngine(Engine):
 
             etype = event.get("type")
             if etype == "assistant":
-                message = event.get("message", {})
-                stop = message.get("stop_reason")
-                if stop:
-                    finish_reason = "length" if stop == "max_tokens" else stop
-                usage = message.get("usage", {})
-                tokens_in = usage.get("input_tokens", tokens_in)
-                tokens_out = usage.get("output_tokens", tokens_out)
+                message = event.get("message")
+                if isinstance(message, dict):
+                    stop = message.get("stop_reason")
+                    if stop:
+                        finish_reason = "length" if stop == "max_tokens" else stop
+                    usage = message.get("usage")
+                    if isinstance(usage, dict):
+                        tokens_in = usage.get("input_tokens", tokens_in)
+                        tokens_out = usage.get("output_tokens", tokens_out)
             elif etype == "result":
                 if isinstance(event.get("result"), str):
                     text = event["result"]
-                usage = event.get("usage", {})
-                tokens_in = usage.get("input_tokens", tokens_in)
-                tokens_out = usage.get("output_tokens", tokens_out)
+                usage = event.get("usage")
+                if isinstance(usage, dict):
+                    tokens_in = usage.get("input_tokens", tokens_in)
+                    tokens_out = usage.get("output_tokens", tokens_out)
 
         return ParsedResult(
             text=text,
