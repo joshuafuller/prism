@@ -202,6 +202,21 @@ def test_telemetry_path_from_env(git_repo: Path, tmp_path: Path, monkeypatch) ->
     assert out.exists()
 
 
+def test_run_local_review_posts_to_gitlab_mr(git_repo: Path) -> None:
+    _repo_with_change(git_repo)
+    engine = ScriptedEngine()
+    provider = FakeProvider()
+    cli.run_local_review(
+        load_config(EXAMPLE),
+        target="main",
+        repo=git_repo,
+        engines={"claude-cli": engine, "codex-cli": engine},
+        provider=provider,
+        post_mr=77,
+    )
+    assert provider.posted is not None and provider.posted[0] == 77
+
+
 def test_missing_reviewer_prompt_fails_loudly(git_repo: Path, tmp_path: Path) -> None:
     _repo_with_change(git_repo)
     cfg = tmp_path / "prism.yaml"
