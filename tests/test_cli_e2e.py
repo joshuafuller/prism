@@ -131,6 +131,37 @@ def test_run_local_review_emits_telemetry(git_repo: Path) -> None:
     }
 
 
+def test_ast_risk_escalates_a_tiny_dangerous_diff(git_repo: Path, tmp_path: Path) -> None:
+    # A tiny diff (trivial by size) that introduces eval() must escalate to full so the
+    # full-tier security reviewer runs. The eval string below is a fixture, never executed.
+    def git(*args: str) -> None:
+        subprocess.run(
+            ["git", "-C", str(git_repo), *args], check=True, capture_output=True, text=True
+        )
+
+    git("checkout", "-q", "-b", "feature")
+    (git_repo / "a.py").write_text("import sys\nv = eval(sys.argv[1])\n")
+    git("add", "-A")
+    git("commit", "-q", "-m", "tiny but risky")
+
+    cfg = tmp_path / "prism.yaml"
+    cfg.write_text(
+        "engines:\n  claude-cli: {kind: claude-cli}\n  codex-cli: {kind: codex-cli}\n"
+        "reviewers:\n"
+        "  code_quality: {engine: claude-cli, effort: medium}\n"
+        "  security: {engine: codex-cli, effort: high, min_tier: full}\n"
+        "coordinator: {engine: claude-cli, effort: high}\n"
+    )
+    security = RecordingEngine()
+    cli.run_local_review(
+        load_config(cfg),
+        target="main",
+        repo=git_repo,
+        engines={"claude-cli": ScriptedEngine(), "codex-cli": security},
+    )
+    assert security.calls >= 1  # AST escalated trivial->full, so security ran
+
+
 def test_main_exits_1_on_significant_concerns(monkeypatch) -> None:
     blocked = ReviewResult(findings=[], decision=Decision.SIGNIFICANT_CONCERNS, summary="bad")
     monkeypatch.setattr(cli, "run_local_review", lambda *a, **k: blocked)
