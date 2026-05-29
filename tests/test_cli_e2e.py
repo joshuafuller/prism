@@ -31,6 +31,17 @@ class FailingEngine:
         return ParsedResult(text="not valid json")
 
 
+class RecordingEngine:
+    """Returns empty findings and counts how many times it was called."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def run(self, prompt: str, *, effort: Effort, model: str | None = None) -> ParsedResult:
+        self.calls += 1
+        return ParsedResult(text="[]")
+
+
 class FakeProvider:
     def __init__(self) -> None:
         self.posted: tuple[int, str] | None = None
@@ -79,6 +90,25 @@ def test_run_local_review_surfaces_skipped_reviewer(git_repo: Path) -> None:
     report = (git_repo / ".prism" / "report.md").read_text()
     assert "Reviewers skipped" in report
     assert "security" in report
+
+
+def test_trivial_diff_skips_higher_tier_reviewers(git_repo: Path, tmp_path: Path) -> None:
+    _repo_with_change(git_repo)  # 1-line change -> trivial tier
+    cfg = tmp_path / "prism.yaml"
+    cfg.write_text(
+        "engines:\n  claude-cli: {kind: claude-cli}\n  codex-cli: {kind: codex-cli}\n"
+        "reviewers:\n"
+        "  code_quality: {engine: claude-cli, effort: medium}\n"
+        "  security: {engine: codex-cli, effort: high, min_tier: full}\n"
+        "coordinator: {engine: claude-cli, effort: high}\n"
+    )
+    security = RecordingEngine()
+    engines = {"claude-cli": ScriptedEngine(), "codex-cli": security}
+    cli.run_local_review(load_config(cfg), target="main", repo=git_repo, engines=engines)
+
+    assert security.calls == 0  # security requires 'full'; diff is 'trivial'
+    report = (git_repo / ".prism" / "report.md").read_text()
+    assert "security" in report  # reported, not silently dropped (ADR-0012/0013)
 
 
 def test_main_exits_1_on_significant_concerns(monkeypatch) -> None:
