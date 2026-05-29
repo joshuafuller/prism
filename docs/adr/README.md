@@ -16,3 +16,6 @@ Deprecated.
 | [0004](0004-github-first-via-gh-cli.md) | GitHub-first via the `gh` CLI behind a VCS abstraction | Accepted |
 | [0005](0005-beads-work-tracking.md) | Beads (`bd`) as the work-tracking system of record | Accepted |
 | [0006](0006-reasoning-effort-routing-knob.md) | Reasoning effort as a first-class routing knob | Accepted |
+| [0007](0007-runtime-divergence-from-opencode.md) | Runtime: subscription CLIs replace OpenCode | Accepted |
+| [0008](0008-orchestration-pluggable-seam.md) | Orchestration is a pluggable seam; MVP ships simplest strategy | Accepted |
+| [0009](0009-markdown-agent-prompts.md) | Agent prompts in markdown + shared rules file | Accepted |
