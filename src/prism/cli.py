@@ -31,6 +31,7 @@ from prism.risk import RiskTier, assess_risk_tier
 from prism.telemetry import emit, record_from_result
 from prism.vcs.base import VCSProvider
 from prism.vcs.github import GitHubProvider
+from prism.vcs.gitlab import GitLabProvider
 from prism.workspace import build_workspace
 
 
@@ -75,6 +76,7 @@ def run_local_review(
     engines: dict[str, Engine] | None = None,
     provider: VCSProvider | None = None,
     post_pr: int | None = None,
+    post_mr: int | None = None,
     telemetry_path: Path | str | None = None,
 ) -> ReviewResult:
     """Run a full local review and return the judged result (engines injectable for tests)."""
@@ -161,9 +163,13 @@ def run_local_review(
     )
 
     if post_pr is not None:
-        prov = provider or GitHubProvider()
-        prov.auth_account()  # identity precheck (raises if gh isn't authed)
-        prov.post_summary(post_pr, report)
+        gh = provider or GitHubProvider()
+        gh.auth_account()  # identity precheck (raises if gh isn't authed)
+        gh.post_summary(post_pr, report)
+    if post_mr is not None:
+        gl = provider or GitLabProvider()
+        gl.auth_account()  # identity precheck (raises if glab isn't authed)
+        gl.post_summary(post_mr, report)
 
     return result
 
@@ -177,11 +183,14 @@ def main(argv: list[str] | None = None) -> int:
     local.add_argument("--target", required=True, help="git ref to diff against (e.g. main)")
     local.add_argument("--config", default="prism.yaml", help="path to prism config")
     local.add_argument("--repo", default=".", help="repo working tree")
-    local.add_argument("--post-pr", type=int, default=None, help="also post summary to this PR")
+    local.add_argument("--post-pr", type=int, default=None, help="also post to this GitHub PR")
+    local.add_argument("--post-mr", type=int, default=None, help="also post to this GitLab MR")
     args = parser.parse_args(argv)
 
     config = load_config(args.config)
-    result = run_local_review(config, args.target, args.repo, post_pr=args.post_pr)
+    result = run_local_review(
+        config, args.target, args.repo, post_pr=args.post_pr, post_mr=args.post_mr
+    )
     print(to_markdown(result))
     # Fail CI when the decision is at least as severe as the configured threshold (ADR-0011).
     return 1 if result.decision.at_least(config.policy.fail_on) else 0

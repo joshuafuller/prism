@@ -87,6 +87,7 @@ Add a `prism.yaml` to your repo (copy `prism.example.yaml`), then:
 docker build -t prism .                 # once (use --build-arg APP_UID="$(id -u)" if your uid != 1000)
 bin/prism local --target main           # review your branch vs main → report.md
 bin/prism local --target main --post-pr 42   # also post a summary to GitHub PR #42
+bin/prism local --target main --post-mr 77   # …or to GitLab MR !77 (via glab)
 ```
 
 `bin/prism` mounts your repo and a **throwaway copy** of your `~/.claude` / `~/.codex` /
