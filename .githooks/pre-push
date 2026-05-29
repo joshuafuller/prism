@@ -1,3 +1,11 @@
 #!/usr/bin/env sh
-# Delegate to beads' pre-push hook (managed by beads).
-if [ -x .beads/hooks/pre-push ]; then exec .beads/hooks/pre-push "$@"; fi
+# Prism pre-push: beads sync + full local CI gate (mirrors .github/workflows/ci.yml).
+set -e
+
+# 1) Delegate to beads' pre-push hook (issue sync), if present.
+if [ -x .beads/hooks/pre-push ]; then
+    .beads/hooks/pre-push "$@"
+fi
+
+# 2) Full check gate — blocks the push if anything fails.
+exec sh scripts/check.sh
