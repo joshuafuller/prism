@@ -99,6 +99,8 @@ def run_local_review(
     coordinator = FanOutCoordinator()
     fanout = coordinator.gather_findings(jobs, context)
     skipped = tier_skipped + fanout.skipped
+    failed_names = {name for name, _ in fanout.skipped}
+    reviewers_run = [job.name for job in jobs if job.name not in failed_names]
 
     # Surface skipped reviewers to the coordinator too, so an incomplete review is judged
     # as incomplete rather than silently treated as clean (ADR-0012: no silent truncation).
@@ -133,7 +135,7 @@ def run_local_review(
             timestamp=datetime.now(UTC).isoformat(),
             target=target,
             tier=tier.value,
-            reviewers_run=[job.name for job in jobs],
+            reviewers_run=reviewers_run,
             reviewers_skipped=[name for name, _ in skipped],
             duration_s=time.perf_counter() - start,
         ),
