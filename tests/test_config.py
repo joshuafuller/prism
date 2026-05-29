@@ -16,6 +16,22 @@ def _write(tmp_path: Path, text: str) -> Path:
     return p
 
 
+def test_per_reviewer_timeout_default_and_override(tmp_path: Path) -> None:
+    assert load_config(EXAMPLE).per_reviewer_timeout == 600.0  # generous default
+    p = _write(
+        tmp_path,
+        """
+engines:
+  claude-cli: {kind: claude-cli}
+reviewers:
+  security: {engine: claude-cli, effort: high}
+coordinator: {engine: claude-cli, effort: high}
+per_reviewer_timeout: 900
+""",
+    )
+    assert load_config(p).per_reviewer_timeout == 900.0
+
+
 def test_loads_example_config() -> None:
     cfg = load_config(EXAMPLE)
     assert isinstance(cfg, Config)
