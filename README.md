@@ -4,6 +4,14 @@
   <img src="docs/assets/prism-banner.png" alt="A code diff enters a prism and refracts into five reviewer wavelengths — security, code quality, performance, documentation, release — recombined into a single verdict" width="100%">
 </p>
 
+<p align="center">
+  <img alt="status: alpha" src="https://img.shields.io/badge/status-alpha-orange">
+  <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue">
+  <img alt="built with uv" src="https://img.shields.io/badge/built%20with-uv-de5fe9">
+  <img alt="runs on Claude + Codex subscriptions" src="https://img.shields.io/badge/runs%20on-Claude%20%2B%20Codex%20subscriptions-111111">
+  <img alt="reviews: AI-assisted" src="https://img.shields.io/badge/reviews-AI--assisted-8957e5">
+</p>
+
 **AI code review orchestration that runs on your Claude/Codex subscriptions — not per-token API billing.**
 
 Prism splits a diff into specialized reviewer "wavelengths" (security, code quality, …),
