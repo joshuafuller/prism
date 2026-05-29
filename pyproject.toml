@@ -6,7 +6,9 @@ authors = [
     { name = "Joshua Fuller", email = "joshuafuller@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pydantic>=2.13.4",
+]
 
 [project.scripts]
 prism = "prism:main"
