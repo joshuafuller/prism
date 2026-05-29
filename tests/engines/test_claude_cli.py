@@ -51,6 +51,18 @@ def test_parses_result_text_and_usage(fake_runner, make_proc) -> None:
     assert res.finish_reason == "end_turn"
 
 
+def test_parse_tolerates_null_message_and_usage(fake_runner, make_proc) -> None:
+    # Real CLIs occasionally emit null fields; the parser must degrade, not crash.
+    out = _stream(
+        {"type": "assistant", "message": None},
+        {"type": "result", "result": "done", "usage": None},
+    )
+    res = ClaudeCLIEngine(runner=fake_runner([make_proc(out)])).run("p")
+    assert res.text == "done"
+    assert res.tokens_in == 0
+    assert res.tokens_out == 0
+
+
 def test_max_tokens_stop_reason_maps_to_length_and_triggers_retry(fake_runner, make_proc) -> None:
     truncated = _stream(
         {"type": "assistant", "message": {"stop_reason": "max_tokens", "usage": {}}},
