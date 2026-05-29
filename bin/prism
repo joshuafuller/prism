@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# Run Prism natively in Docker, mounting the current repo and your subscription creds.
+# The CLIs authenticate with your existing logins; nothing is baked into the image.
+#
+#   bin/prism local --target main
+#   bin/prism local --target main --post-pr 42
+#
+# Build once:  docker build -t prism .
+set -eu
+
+IMAGE="${PRISM_IMAGE:-prism}"
+
+exec docker run --rm -i \
+    -v "$PWD":/repo \
+    -v "$HOME/.claude":/home/app/.claude \
+    -v "$HOME/.claude.json":/home/app/.claude.json \
+    -v "$HOME/.codex":/home/app/.codex \
+    -v "$HOME/.config/gh":/home/app/.config/gh \
+    "$IMAGE" "$@"
