@@ -19,3 +19,4 @@ Deprecated.
 | [0007](0007-runtime-divergence-from-opencode.md) | Runtime: subscription CLIs replace OpenCode | Accepted |
 | [0008](0008-orchestration-pluggable-seam.md) | Orchestration is a pluggable seam; MVP ships simplest strategy | Accepted |
 | [0009](0009-markdown-agent-prompts.md) | Agent prompts in markdown + shared rules file | Accepted |
+| [0010](0010-mandatory-tdd-red-green-refactor.md) | Mandatory Red-Green-Refactor with per-stage commits | Accepted |
