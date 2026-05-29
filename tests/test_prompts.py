@@ -3,7 +3,9 @@ import pytest
 from prism.prompts import REVIEWER_NAMES, build_prompt, sanitize_context
 
 
-@pytest.mark.parametrize("reviewer", ["security", "code_quality"])
+@pytest.mark.parametrize(
+    "reviewer", ["security", "code_quality", "performance", "documentation", "release"]
+)
 def test_reviewer_prompts_have_what_to_and_not_to_flag(reviewer: str) -> None:
     prompt = build_prompt(reviewer, context="")
     assert "## What to Flag" in prompt
@@ -38,5 +40,5 @@ def test_context_boundary_tags_are_sanitized() -> None:
 
 
 def test_reviewer_names_lists_the_specialists() -> None:
-    assert "security" in REVIEWER_NAMES
-    assert "code_quality" in REVIEWER_NAMES
+    for name in ("security", "code_quality", "performance", "documentation", "release"):
+        assert name in REVIEWER_NAMES
