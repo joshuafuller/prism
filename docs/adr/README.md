@@ -22,3 +22,4 @@ Deprecated.
 | [0010](0010-mandatory-tdd-red-green-refactor.md) | Mandatory Red-Green-Refactor with per-stage commits | Accepted |
 | [0011](0011-decision-ordering-and-fail-on-semantics.md) | Decision severity ordering and `policy.fail_on` semantics | Accepted |
 | [0012](0012-enforced-cross-cutting-invariants.md) | Enforced cross-cutting invariants | Accepted |
+| [0013](0013-risk-tiers.md) | Risk tiers — scale reviewers/effort by diff | Accepted |
