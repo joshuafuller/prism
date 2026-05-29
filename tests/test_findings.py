@@ -39,6 +39,13 @@ def test_decision_blocks_only_on_significant_concerns() -> None:
     assert Decision.MINOR_ISSUES.blocks is False
 
 
+def test_decision_severity_ordering() -> None:
+    assert Decision.SIGNIFICANT_CONCERNS.at_least(Decision.MINOR_ISSUES)
+    assert Decision.MINOR_ISSUES.at_least(Decision.MINOR_ISSUES)
+    assert not Decision.APPROVED.at_least(Decision.MINOR_ISSUES)
+    assert Decision.SIGNIFICANT_CONCERNS.rank > Decision.APPROVED.rank
+
+
 def test_review_result_holds_findings_and_decision() -> None:
     rr = ReviewResult(findings=[_finding()], decision=Decision.APPROVED_WITH_COMMENTS, summary="ok")
     assert len(rr.findings) == 1

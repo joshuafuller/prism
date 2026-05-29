@@ -76,3 +76,16 @@ def test_main_exits_0_on_approved(monkeypatch) -> None:
     monkeypatch.setattr(cli, "run_local_review", lambda *a, **k: ok)
     code = cli.main(["local", "--target", "main", "--config", str(EXAMPLE), "--repo", "."])
     assert code == 0
+
+
+def test_main_fails_when_decision_more_severe_than_fail_on(monkeypatch, tmp_path) -> None:
+    cfg = tmp_path / "prism.yaml"
+    cfg.write_text(
+        "engines:\n  claude-cli: {kind: claude-cli}\n"
+        "reviewers:\n  code_quality: {engine: claude-cli, effort: low}\n"
+        "coordinator: {engine: claude-cli, effort: low}\n"
+        "policy:\n  fail_on: minor_issues\n"
+    )
+    blocked = ReviewResult(findings=[], decision=Decision.SIGNIFICANT_CONCERNS, summary="x")
+    monkeypatch.setattr(cli, "run_local_review", lambda *a, **k: blocked)
+    assert cli.main(["local", "--target", "main", "--config", str(cfg), "--repo", "."]) == 1
