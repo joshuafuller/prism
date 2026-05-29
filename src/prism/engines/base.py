@@ -17,10 +17,13 @@ ever called.
 from __future__ import annotations
 
 import subprocess
+import threading
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import IO
 
 
 class Effort(StrEnum):
@@ -100,6 +103,79 @@ def subprocess_runner(argv: list[str], stdin: str, timeout: float) -> CompletedP
     except subprocess.TimeoutExpired as exc:
         raise TimeoutError(str(exc)) from exc
     return CompletedProc(proc.returncode, proc.stdout, proc.stderr)
+
+
+def streaming_subprocess_runner(
+    argv: list[str],
+    stdin: str,
+    *,
+    inactivity_s: float,
+    overall_s: float,
+    heartbeat: Callable[[float], None] | None = None,
+    heartbeat_interval_s: float = 30.0,
+    poll_s: float = 0.05,
+) -> CompletedProc:
+    """Run a subprocess, streaming its output to track liveness.
+
+    Kills the process when it produces **no output for ``inactivity_s``** (it has hung or
+    crashed) rather than on a blunt wall-clock — so a model that is slowly but actively
+    streaming is never killed for being slow. ``overall_s`` is a generous backstop cap.
+    ``heartbeat(quiet_seconds)`` is called every ``heartbeat_interval_s`` while waiting,
+    so a long-but-alive run is visibly working. Raises ``TimeoutError`` on either limit.
+    """
+    proc = subprocess.Popen(
+        argv,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+    out: list[str] = []
+    err: list[str] = []
+    last_activity = [time.monotonic()]
+    lock = threading.Lock()
+
+    def pump(stream: IO[str], sink: list[str]) -> None:
+        for line in stream:
+            with lock:
+                sink.append(line)
+                last_activity[0] = time.monotonic()
+
+    threads: list[threading.Thread] = []
+    for stream, sink in ((proc.stdout, out), (proc.stderr, err)):
+        if stream is not None:
+            t = threading.Thread(target=pump, args=(stream, sink), daemon=True)
+            t.start()
+            threads.append(t)
+
+    if proc.stdin is not None:
+        try:
+            proc.stdin.write(stdin)
+        finally:
+            proc.stdin.close()
+
+    start = time.monotonic()
+    last_beat = start
+    while proc.poll() is None:
+        now = time.monotonic()
+        with lock:
+            quiet = now - last_activity[0]
+        if quiet > inactivity_s:
+            proc.kill()
+            raise TimeoutError(f"no output for {inactivity_s:.0f}s (inactivity)")
+        if now - start > overall_s:
+            proc.kill()
+            raise TimeoutError(f"exceeded overall cap of {overall_s:.0f}s")
+        if heartbeat is not None and now - last_beat >= heartbeat_interval_s:
+            heartbeat(quiet)
+            last_beat = now
+        time.sleep(poll_s)
+
+    for t in threads:
+        t.join(timeout=2.0)
+    with lock:
+        return CompletedProc(proc.returncode or 0, "".join(out), "".join(err))
 
 
 _AUTH_MARKERS = ("401", "403", "unauthorized", "invalid api key", "authentication")
