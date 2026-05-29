@@ -171,6 +171,35 @@ def test_telemetry_excludes_failed_reviewer_from_run(git_repo: Path) -> None:
     assert "security" not in rec["reviewers_run"]  # failed -> not counted as run
 
 
+def test_telemetry_path_param_override(git_repo: Path, tmp_path: Path) -> None:
+    _repo_with_change(git_repo)
+    out = tmp_path / "global" / "telemetry.jsonl"
+    engine = ScriptedEngine()
+    cli.run_local_review(
+        load_config(EXAMPLE),
+        target="main",
+        repo=git_repo,
+        engines={"claude-cli": engine, "codex-cli": engine},
+        telemetry_path=out,
+    )
+    assert out.exists()
+    assert "decision" in json.loads(out.read_text().strip().splitlines()[-1])
+
+
+def test_telemetry_path_from_env(git_repo: Path, tmp_path: Path, monkeypatch) -> None:
+    _repo_with_change(git_repo)
+    out = tmp_path / "env-telemetry.jsonl"
+    monkeypatch.setenv("PRISM_TELEMETRY_PATH", str(out))
+    engine = ScriptedEngine()
+    cli.run_local_review(
+        load_config(EXAMPLE),
+        target="main",
+        repo=git_repo,
+        engines={"claude-cli": engine, "codex-cli": engine},
+    )
+    assert out.exists()
+
+
 def test_main_exits_1_on_significant_concerns(monkeypatch) -> None:
     blocked = ReviewResult(findings=[], decision=Decision.SIGNIFICANT_CONCERNS, summary="bad")
     monkeypatch.setattr(cli, "run_local_review", lambda *a, **k: blocked)
