@@ -6,14 +6,31 @@
 #   bin/prism local --target main --post-pr 42
 #
 # Build once:  docker build -t prism .
+# Non-1000 host uid:  docker build --build-arg APP_UID="$(id -u)" -t prism .
 set -eu
 
 IMAGE="${PRISM_IMAGE:-prism}"
 
+# Fail fast if a required credential path is missing — otherwise `docker -v` would
+# auto-create it as a root-owned directory on the host and break auth confusingly.
+for path in "$HOME/.claude" "$HOME/.codex" "$HOME/.config/gh"; do
+    if [ ! -e "$path" ]; then
+        echo "prism: missing $path — log in on the host first (claude, codex, gh auth login)" >&2
+        exit 1
+    fi
+done
+
+# ~/.claude.json is optional; only mount it (as a file) when it actually exists.
+claude_json_mount=""
+if [ -f "$HOME/.claude.json" ]; then
+    claude_json_mount="-v $HOME/.claude.json:/home/app/.claude.json"
+fi
+
+# shellcheck disable=SC2086 # word-splitting of the optional mount is intended
 exec docker run --rm -i \
     -v "$PWD":/repo \
     -v "$HOME/.claude":/home/app/.claude \
-    -v "$HOME/.claude.json":/home/app/.claude.json \
+    $claude_json_mount \
     -v "$HOME/.codex":/home/app/.codex \
     -v "$HOME/.config/gh":/home/app/.config/gh \
     "$IMAGE" "$@"

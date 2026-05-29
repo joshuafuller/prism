@@ -20,8 +20,10 @@ RUN npm install -g @anthropic-ai/claude-code @openai/codex
 # uv (no pip).
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Non-root user; uid 1000 matches the typical host user so mounted creds are readable.
-RUN useradd -m -u 1000 -d /home/app app
+# Non-root user. APP_UID should match the host user so mounted creds are readable
+# (default 1000; override: docker build --build-arg APP_UID="$(id -u)").
+ARG APP_UID=1000
+RUN useradd -m -u "${APP_UID}" -d /home/app app
 USER app
 ENV HOME=/home/app
 
