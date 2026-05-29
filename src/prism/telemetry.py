@@ -26,6 +26,8 @@ class ReviewRecord:
     findings_by_severity: dict[str, int]
     decision: str
     duration_s: float
+    tokens_in: int
+    tokens_out: int
 
 
 def record_from_result(
@@ -37,6 +39,8 @@ def record_from_result(
     reviewers_run: list[str],
     reviewers_skipped: list[str],
     duration_s: float,
+    tokens_in: int = 0,
+    tokens_out: int = 0,
 ) -> ReviewRecord:
     by_severity = Counter(f.severity.value for f in result.findings)
     return ReviewRecord(
@@ -49,6 +53,8 @@ def record_from_result(
         findings_by_severity=dict(by_severity),
         decision=result.decision.value,
         duration_s=duration_s,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
     )
 
 

@@ -158,6 +158,8 @@ def run_local_review(
             reviewers_run=reviewers_run,
             reviewers_skipped=[name for name, _ in skipped],
             duration_s=time.perf_counter() - start,
+            tokens_in=sum(getattr(e, "tokens_in", 0) for e in engines.values()),
+            tokens_out=sum(getattr(e, "tokens_out", 0) for e in engines.values()),
         ),
         tel_path,
     )

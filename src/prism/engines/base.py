@@ -196,6 +196,9 @@ class Engine(ABC):
         self._inactivity_s = inactivity_s
         self._overall_s = overall_s
         self._heartbeat = heartbeat
+        # Cumulative token usage across all run() calls on this engine (for telemetry).
+        self.tokens_in = 0
+        self.tokens_out = 0
 
     @abstractmethod
     def _build_argv(self, effort: Effort, model: str | None) -> list[str]:
@@ -231,7 +234,10 @@ class Engine(ABC):
         except TimeoutError as exc:
             raise EngineTimeout(f"{self.name} timed out (inactivity/overall limit)") from exc
         self._raise_for_status(proc)
-        return self._parse(proc.stdout)
+        result = self._parse(proc.stdout)
+        self.tokens_in += result.tokens_in
+        self.tokens_out += result.tokens_out
+        return result
 
     def _raise_for_status(self, proc: CompletedProc) -> None:
         if proc.returncode == 0:
