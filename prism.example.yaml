@@ -20,6 +20,12 @@ reviewers:
   security:
     engine: codex-cli   # spread across both subscriptions to ease rate limits
     effort: high
+  performance:
+    engine: claude-cli
+    effort: medium
+  # Available reviewers (enable when relevant; risk tiers will gate these automatically):
+  # documentation: { engine: claude-cli, effort: low }
+  # release:       { engine: claude-cli, effort: low }
 
 coordinator:
   engine: claude-cli

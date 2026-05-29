@@ -60,3 +60,5 @@
 {"id":"int-8faa0abe","kind":"field_change","created_at":"2026-05-29T18:29:02.545492506Z","actor":"Joshua Fuller","issue_id":"prism-4gf.37","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
 {"id":"int-52aaeca6","kind":"field_change","created_at":"2026-05-29T18:30:01.388740852Z","actor":"Joshua Fuller","issue_id":"prism-4gf.37","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
 {"id":"int-8beb9e1c","kind":"field_change","created_at":"2026-05-29T18:30:19.176420575Z","actor":"Joshua Fuller","issue_id":"prism-4gf.36","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
+{"id":"int-cf0a9c58","kind":"field_change","created_at":"2026-05-29T18:31:15.496994986Z","actor":"Joshua Fuller","issue_id":"prism-4gf.36","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
+{"id":"int-24441440","kind":"field_change","created_at":"2026-05-29T18:36:15.062757797Z","actor":"Joshua Fuller","issue_id":"prism-se6.1","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}

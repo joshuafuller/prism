@@ -13,8 +13,9 @@ from pathlib import Path
 
 AGENTS_DIR = Path(__file__).parent / "agents"
 
-# The specialist reviewers Prism spawns (the coordinator is separate).
-REVIEWER_NAMES = ("security", "code_quality")
+# The specialist reviewers Prism ships (the coordinator is separate). Which actually run
+# is decided by config; each has a matching agents/<name>.md.
+REVIEWER_NAMES = ("security", "code_quality", "performance", "documentation", "release")
 
 # XML-style section tags an attacker might inject to break out of the prompt structure.
 PROMPT_BOUNDARY_TAGS = (
