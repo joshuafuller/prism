@@ -98,7 +98,7 @@ def run_local_review(
             reason = f"not run: requires '{rc.min_tier}' tier (diff is '{tier}')"
             tier_skipped.append((name, reason))
 
-    coordinator = FanOutCoordinator()
+    coordinator = FanOutCoordinator(per_reviewer_timeout=config.per_reviewer_timeout)
     fanout = coordinator.gather_findings(jobs, context)
     skipped = tier_skipped + fanout.skipped
     failed_names = {name for name, _ in fanout.skipped}

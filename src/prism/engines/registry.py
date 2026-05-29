@@ -12,13 +12,13 @@ from prism.engines.claude_cli import ClaudeCLIEngine
 from prism.engines.codex_cli import CodexCLIEngine
 
 
-def build_engine(config: EngineConfig) -> Engine:
+def build_engine(config: EngineConfig, *, timeout_s: float = 300.0) -> Engine:
     """Instantiate the engine for a single ``EngineConfig``."""
     match config.kind:
         case "claude-cli":
-            return ClaudeCLIEngine()
+            return ClaudeCLIEngine(timeout_s=timeout_s)
         case "codex-cli":
-            return CodexCLIEngine()
+            return CodexCLIEngine(timeout_s=timeout_s)
         case "anthropic-api" | "openai-api":
             raise NotImplementedError(
                 f"API engine {config.kind!r} is deferred (prism-4gf.13); "
@@ -28,4 +28,7 @@ def build_engine(config: EngineConfig) -> Engine:
 
 def build_engines(config: Config) -> dict[str, Engine]:
     """Instantiate every named engine in a Config, keyed by engine name."""
-    return {name: build_engine(ec) for name, ec in config.engines.items()}
+    return {
+        name: build_engine(ec, timeout_s=config.per_reviewer_timeout)
+        for name, ec in config.engines.items()
+    }

@@ -47,6 +47,8 @@ class Config(BaseModel):
     reviewers: dict[str, ReviewerConfig]
     coordinator: CoordinatorConfig
     policy: PolicyConfig = PolicyConfig()
+    # Generous default so large/throttled reviews don't get a reviewer killed mid-flight.
+    per_reviewer_timeout: float = 600.0
 
     @model_validator(mode="after")
     def _engine_refs_must_exist(self) -> Config:
