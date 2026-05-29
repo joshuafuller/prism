@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Delegate to beads' post-checkout hook (managed by beads).
+if [ -x .beads/hooks/post-checkout ]; then exec .beads/hooks/post-checkout "$@"; fi

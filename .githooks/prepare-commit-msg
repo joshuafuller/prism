@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Delegate to beads' prepare-commit-msg hook (managed by beads).
+if [ -x .beads/hooks/prepare-commit-msg ]; then exec .beads/hooks/prepare-commit-msg "$@"; fi

@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+# Prism pre-commit: chain beads (issue export) + lint gate.
+# Activated via: git config core.hooksPath .githooks
+set -e
+
+# 1) Delegate to beads' own pre-commit if present (keeps issue store in sync).
+if [ -x .beads/hooks/pre-commit ]; then
+    .beads/hooks/pre-commit "$@"
+fi
+
+# 2) Forced lint gate on staged Python files.
+exec sh scripts/hooks/lint.sh

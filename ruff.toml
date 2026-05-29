@@ -1,0 +1,24 @@
+# Ruff config (standalone so the lint hook works before/independent of pyproject.toml).
+# When pyproject.toml gains a [tool.ruff] table, migrate this there to keep one source.
+line-length = 100
+target-version = "py312"
+
+[lint]
+# A pragmatic, strict-but-not-noisy default set. Tune as the codebase grows.
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort (import order)
+    "UP",       # pyupgrade
+    "B",        # flake8-bugbear (likely bugs)
+    "SIM",      # flake8-simplify (DRY / simpler forms)
+    "C4",       # comprehensions
+    "RUF",      # ruff-specific
+]
+ignore = []
+
+[lint.isort]
+known-first-party = ["prism"]
+
+[format]
+quote-style = "double"

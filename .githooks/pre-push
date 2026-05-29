@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Delegate to beads' pre-push hook (managed by beads).
+if [ -x .beads/hooks/pre-push ]; then exec .beads/hooks/pre-push "$@"; fi
