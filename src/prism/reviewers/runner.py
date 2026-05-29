@@ -14,7 +14,7 @@ from pydantic import ValidationError
 from prism.config import ReviewerConfig
 from prism.engines.base import Engine
 from prism.findings import Finding
-from prism.jsonio import strip_code_fence
+from prism.jsonio import extract_json_array, strip_code_fence
 from prism.prompts import build_prompt
 
 _REPAIR_SUFFIX = (
@@ -28,22 +28,30 @@ class ReviewerOutputError(RuntimeError):
 
 
 def _parse_findings(text: str, reviewer_name: str) -> list[Finding] | None:
-    """Parse a findings JSON array, or return None if it can't be parsed/validated."""
-    try:
-        data = json.loads(strip_code_fence(text))
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(data, list):
-        return None
-    findings: list[Finding] = []
-    for item in data:
-        if isinstance(item, dict):
-            item.setdefault("reviewer", reviewer_name)
+    """Parse a findings JSON array, tolerating JSON wrapped in prose; None if unparseable."""
+    # Try the cleaned text first, then a best-effort extraction of the array from prose.
+    for candidate in (strip_code_fence(text), extract_json_array(text)):
+        if not candidate:
+            continue
         try:
-            findings.append(Finding.model_validate(item))
-        except ValidationError:
-            return None
-    return findings
+            data = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(data, list):
+            continue
+        findings: list[Finding] = []
+        valid = True
+        for item in data:
+            if isinstance(item, dict):
+                item.setdefault("reviewer", reviewer_name)
+            try:
+                findings.append(Finding.model_validate(item))
+            except ValidationError:
+                valid = False
+                break
+        if valid:
+            return findings
+    return None
 
 
 def run_reviewer(

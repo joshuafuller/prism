@@ -17,7 +17,7 @@ from pydantic import ValidationError
 from prism.config import ReviewerConfig
 from prism.engines.base import Effort, Engine
 from prism.findings import Finding, ReviewResult
-from prism.jsonio import strip_code_fence
+from prism.jsonio import extract_json_object, strip_code_fence
 from prism.prompts import build_prompt
 from prism.reviewers.runner import run_reviewer
 
@@ -103,13 +103,18 @@ class FanOutCoordinator:
 
 
 def _parse_review_result(text: str) -> ReviewResult | None:
-    try:
-        obj = json.loads(strip_code_fence(text))
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(obj, dict):
-        return None
-    try:
-        return ReviewResult.model_validate(obj)
-    except ValidationError:
-        return None
+    # Try the cleaned text first, then a best-effort extraction of the object from prose.
+    for candidate in (strip_code_fence(text), extract_json_object(text)):
+        if not candidate:
+            continue
+        try:
+            obj = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(obj, dict):
+            continue
+        try:
+            return ReviewResult.model_validate(obj)
+        except ValidationError:
+            continue
+    return None

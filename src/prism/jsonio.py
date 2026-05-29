@@ -15,3 +15,21 @@ def strip_code_fence(text: str) -> str:
         stripped = _FENCE_OPEN.sub("", stripped)
         stripped = _FENCE_CLOSE.sub("", stripped.strip())
     return stripped.strip()
+
+
+def _extract(text: str, open_ch: str, close_ch: str) -> str | None:
+    s = strip_code_fence(text)
+    start, end = s.find(open_ch), s.rfind(close_ch)
+    if 0 <= start < end:
+        return s[start : end + 1]
+    return None
+
+
+def extract_json_array(text: str) -> str | None:
+    """Best-effort: the outermost ``[...]`` in text (handles JSON wrapped in prose)."""
+    return _extract(text, "[", "]")
+
+
+def extract_json_object(text: str) -> str | None:
+    """Best-effort: the outermost ``{...}`` in text (handles JSON wrapped in prose)."""
+    return _extract(text, "{", "}")
