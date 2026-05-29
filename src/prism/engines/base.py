@@ -57,6 +57,20 @@ class CompletedProc:
 Runner = Callable[[list[str], str, float], CompletedProc]
 
 
+def merge_usage(container: object, tokens_in: int, tokens_out: int) -> tuple[int, int]:
+    """Return updated token counts from a ``usage`` block inside ``container``.
+
+    Tolerant of missing/null/non-dict containers and usage blocks (real CLI output
+    varies), returning the inputs unchanged when usage isn't present. Shared by the
+    CLI engines so token parsing lives in one place (DRY).
+    """
+    if isinstance(container, dict):
+        usage = container.get("usage")
+        if isinstance(usage, dict):
+            return usage.get("input_tokens", tokens_in), usage.get("output_tokens", tokens_out)
+    return tokens_in, tokens_out
+
+
 class EngineError(Exception):
     """Base class for engine failures."""
 

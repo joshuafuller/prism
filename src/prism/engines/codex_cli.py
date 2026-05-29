@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 
-from prism.engines.base import Effort, Engine, ParsedResult
+from prism.engines.base import Effort, Engine, ParsedResult, merge_usage
 
 # Our Effort vocabulary mapped to codex's accepted reasoning-effort values.
 _EFFORT_TO_CODEX: dict[Effort, str] = {
@@ -67,9 +67,6 @@ class CodexCLIEngine(Engine):
                 ):
                     text = item["text"]
             elif etype == "turn.completed":
-                usage = event.get("usage", {})
-                if isinstance(usage, dict):
-                    tokens_in = usage.get("input_tokens", tokens_in)
-                    tokens_out = usage.get("output_tokens", tokens_out)
+                tokens_in, tokens_out = merge_usage(event, tokens_in, tokens_out)
 
         return ParsedResult(text=text, tokens_in=tokens_in, tokens_out=tokens_out)

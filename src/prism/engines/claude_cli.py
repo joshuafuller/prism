@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 
-from prism.engines.base import Effort, Engine, ParsedResult
+from prism.engines.base import Effort, Engine, ParsedResult, merge_usage
 
 
 class ClaudeCLIEngine(Engine):
@@ -49,17 +49,11 @@ class ClaudeCLIEngine(Engine):
                     stop = message.get("stop_reason")
                     if stop:
                         finish_reason = "length" if stop == "max_tokens" else stop
-                    usage = message.get("usage")
-                    if isinstance(usage, dict):
-                        tokens_in = usage.get("input_tokens", tokens_in)
-                        tokens_out = usage.get("output_tokens", tokens_out)
+                tokens_in, tokens_out = merge_usage(message, tokens_in, tokens_out)
             elif etype == "result":
                 if isinstance(event.get("result"), str):
                     text = event["result"]
-                usage = event.get("usage")
-                if isinstance(usage, dict):
-                    tokens_in = usage.get("input_tokens", tokens_in)
-                    tokens_out = usage.get("output_tokens", tokens_out)
+                tokens_in, tokens_out = merge_usage(event, tokens_in, tokens_out)
 
         return ParsedResult(
             text=text,
