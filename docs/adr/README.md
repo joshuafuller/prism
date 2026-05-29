@@ -20,3 +20,5 @@ Deprecated.
 | [0008](0008-orchestration-pluggable-seam.md) | Orchestration is a pluggable seam; MVP ships simplest strategy | Accepted |
 | [0009](0009-markdown-agent-prompts.md) | Agent prompts in markdown + shared rules file | Accepted |
 | [0010](0010-mandatory-tdd-red-green-refactor.md) | Mandatory Red-Green-Refactor with per-stage commits | Accepted |
+| [0011](0011-decision-ordering-and-fail-on-semantics.md) | Decision severity ordering and `policy.fail_on` semantics | Accepted |
+| [0012](0012-enforced-cross-cutting-invariants.md) | Enforced cross-cutting invariants | Accepted |
