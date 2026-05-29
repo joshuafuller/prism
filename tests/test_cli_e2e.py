@@ -125,6 +125,7 @@ def test_run_local_review_emits_telemetry(git_repo: Path) -> None:
     tel = git_repo / ".prism" / "telemetry.jsonl"
     record = json.loads(tel.read_text().strip().splitlines()[-1])
     assert "tier" in record
+    assert "tokens_in" in record and "tokens_out" in record
     assert record["decision"] in {
         "approved",
         "approved_with_comments",

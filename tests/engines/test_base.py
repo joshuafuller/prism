@@ -46,6 +46,14 @@ def test_prompt_goes_to_stdin_not_argv(fake_runner, make_proc) -> None:
     assert r.last_stdin == "HELLO-PROMPT"
 
 
+def test_engine_accumulates_token_usage(fake_runner, make_proc) -> None:
+    proc = make_proc(json.dumps({"text": "x", "in": 12, "out": 7, "finish": "stop"}))
+    eng = DummyEngine(runner=fake_runner([proc]))
+    eng.run("p")
+    assert eng.tokens_in == 12
+    assert eng.tokens_out == 7
+
+
 def test_parses_text_and_token_usage(fake_runner, make_proc) -> None:
     proc = make_proc(json.dumps({"text": "reviewed", "in": 10, "out": 20, "finish": "stop"}))
     res = DummyEngine(runner=fake_runner([proc])).run("p")

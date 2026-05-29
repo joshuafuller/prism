@@ -31,6 +31,8 @@ def _record(**over: object) -> ReviewRecord:
         "findings_by_severity": {},
         "decision": "approved",
         "duration_s": 0.1,
+        "tokens_in": 0,
+        "tokens_out": 0,
     }
     base.update(over)
     return ReviewRecord(**base)  # type: ignore[arg-type]
@@ -50,12 +52,16 @@ def test_record_from_result_counts_by_severity() -> None:
         reviewers_run=["security", "code_quality"],
         reviewers_skipped=["release"],
         duration_s=1.5,
+        tokens_in=1234,
+        tokens_out=567,
     )
     assert rec.findings_total == 3
     assert rec.findings_by_severity == {"warning": 2, "critical": 1}
     assert rec.decision == "significant_concerns"
     assert rec.tier == "full"
     assert rec.reviewers_skipped == ["release"]
+    assert rec.tokens_in == 1234
+    assert rec.tokens_out == 567
 
 
 def test_emit_appends_jsonl(tmp_path: Path) -> None:
