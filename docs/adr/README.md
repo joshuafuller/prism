@@ -24,3 +24,4 @@ Deprecated.
 | [0012](0012-enforced-cross-cutting-invariants.md) | Enforced cross-cutting invariants | Accepted |
 | [0013](0013-risk-tiers.md) | Risk tiers — scale reviewers/effort by diff | Accepted |
 | [0014](0014-ast-based-risk-escalation.md) | AST-based risk escalation | Accepted |
+| [0015](0015-liveness-based-timeouts.md) | Liveness-based timeouts (streaming Engine) | Accepted |

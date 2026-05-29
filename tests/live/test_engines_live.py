@@ -15,11 +15,11 @@ _PROMPT = "Reply with exactly this token and nothing else: PRISM_LIVE_OK"
 
 @pytest.mark.live
 def test_claude_cli_live_smoke() -> None:
-    result = ClaudeCLIEngine(timeout_s=180).run(_PROMPT, effort=Effort.LOW)
+    result = ClaudeCLIEngine().run(_PROMPT, effort=Effort.LOW)
     assert "PRISM_LIVE_OK" in result.text
 
 
 @pytest.mark.live
 def test_codex_cli_live_smoke() -> None:
-    result = CodexCLIEngine(timeout_s=180).run(_PROMPT, effort=Effort.LOW)
+    result = CodexCLIEngine().run(_PROMPT, effort=Effort.LOW)
     assert "PRISM_LIVE_OK" in result.text

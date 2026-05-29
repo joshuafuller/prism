@@ -33,3 +33,8 @@ coordinator:
 
 policy:
   fail_on: significant_concerns   # nonzero exit / block only at this decision
+
+# Liveness-based limits (ADR-0015): a reviewer is killed only after this many seconds
+# with NO output (hung), never for being slow; overall_timeout is a generous backstop.
+inactivity_timeout: 120
+overall_timeout: 1500

@@ -16,8 +16,10 @@ def _write(tmp_path: Path, text: str) -> Path:
     return p
 
 
-def test_per_reviewer_timeout_default_and_override(tmp_path: Path) -> None:
-    assert load_config(EXAMPLE).per_reviewer_timeout == 600.0  # generous default
+def test_timeout_defaults_and_override(tmp_path: Path) -> None:
+    cfg = load_config(EXAMPLE)
+    assert cfg.inactivity_timeout == 120.0  # liveness window default
+    assert cfg.overall_timeout == 1500.0  # generous backstop default
     p = _write(
         tmp_path,
         """
@@ -26,10 +28,13 @@ engines:
 reviewers:
   security: {engine: claude-cli, effort: high}
 coordinator: {engine: claude-cli, effort: high}
-per_reviewer_timeout: 900
+inactivity_timeout: 90
+overall_timeout: 1800
 """,
     )
-    assert load_config(p).per_reviewer_timeout == 900.0
+    cfg2 = load_config(p)
+    assert cfg2.inactivity_timeout == 90.0
+    assert cfg2.overall_timeout == 1800.0
 
 
 def test_loads_example_config() -> None:

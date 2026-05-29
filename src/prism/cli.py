@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -77,7 +78,11 @@ def run_local_review(
 ) -> ReviewResult:
     """Run a full local review and return the judged result (engines injectable for tests)."""
     start = time.perf_counter()
-    engines = engines or build_engines(config)
+
+    def _heartbeat(quiet_s: float) -> None:
+        print(f"prism: reviewer still working ({quiet_s:.0f}s since last output)…", file=sys.stderr)
+
+    engines = engines or build_engines(config, heartbeat=_heartbeat)
     filtered = filter_diff(GitDiffSource(target, repo).changed_files())
 
     # Risk tier selects which reviewers run and the coordinator's effort (ADR-0013).
@@ -98,7 +103,7 @@ def run_local_review(
             reason = f"not run: requires '{rc.min_tier}' tier (diff is '{tier}')"
             tier_skipped.append((name, reason))
 
-    coordinator = FanOutCoordinator(per_reviewer_timeout=config.per_reviewer_timeout)
+    coordinator = FanOutCoordinator(per_reviewer_timeout=config.overall_timeout)
     fanout = coordinator.gather_findings(jobs, context)
     skipped = tier_skipped + fanout.skipped
     failed_names = {name for name, _ in fanout.skipped}

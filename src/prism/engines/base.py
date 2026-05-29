@@ -23,7 +23,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import IO
+from typing import IO, Protocol
 
 
 class Effort(StrEnum):
@@ -55,9 +55,21 @@ class CompletedProc:
     stderr: str
 
 
-# A Runner runs argv with the given stdin and timeout, returning a CompletedProc.
-# It must raise TimeoutError when the timeout elapses. Injectable for testing.
-Runner = Callable[[list[str], str, float], CompletedProc]
+class Runner(Protocol):
+    """Runs argv with stdin and returns a CompletedProc; raises TimeoutError on a limit.
+
+    Injectable for testing. The production implementation is streaming_subprocess_runner.
+    """
+
+    def __call__(
+        self,
+        argv: list[str],
+        stdin: str,
+        *,
+        inactivity_s: float,
+        overall_s: float,
+        heartbeat: Callable[[float], None] | None = None,
+    ) -> CompletedProc: ...
 
 
 def merge_usage(container: object, tokens_in: int, tokens_out: int) -> tuple[int, int]:
@@ -88,21 +100,6 @@ class EngineAuthError(EngineError):
 
 class EngineRetryable(EngineError):
     """Transient/overload error (e.g. 429/503) -> a failback/retry may help."""
-
-
-def subprocess_runner(argv: list[str], stdin: str, timeout: float) -> CompletedProc:
-    """Default Runner: run a real subprocess, feeding ``stdin`` to its stdin."""
-    try:
-        proc = subprocess.run(
-            argv,
-            input=stdin,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise TimeoutError(str(exc)) from exc
-    return CompletedProc(proc.returncode, proc.stdout, proc.stderr)
 
 
 def streaming_subprocess_runner(
@@ -187,9 +184,18 @@ class Engine(ABC):
 
     name: str = "engine"
 
-    def __init__(self, runner: Runner | None = None, *, timeout_s: float = 300.0) -> None:
-        self._runner: Runner = runner or subprocess_runner
-        self._timeout_s = timeout_s
+    def __init__(
+        self,
+        runner: Runner | None = None,
+        *,
+        inactivity_s: float = 120.0,
+        overall_s: float = 1500.0,
+        heartbeat: Callable[[float], None] | None = None,
+    ) -> None:
+        self._runner: Runner = runner or streaming_subprocess_runner
+        self._inactivity_s = inactivity_s
+        self._overall_s = overall_s
+        self._heartbeat = heartbeat
 
     @abstractmethod
     def _build_argv(self, effort: Effort, model: str | None) -> list[str]:
@@ -215,9 +221,15 @@ class Engine(ABC):
     def _invoke_once(self, prompt: str, effort: Effort, model: str | None) -> ParsedResult:
         argv = self._build_argv(effort, model)
         try:
-            proc = self._runner(argv, prompt, self._timeout_s)
+            proc = self._runner(
+                argv,
+                prompt,
+                inactivity_s=self._inactivity_s,
+                overall_s=self._overall_s,
+                heartbeat=self._heartbeat,
+            )
         except TimeoutError as exc:
-            raise EngineTimeout(f"{self.name} timed out after {self._timeout_s}s") from exc
+            raise EngineTimeout(f"{self.name} timed out (inactivity/overall limit)") from exc
         self._raise_for_status(proc)
         return self._parse(proc.stdout)
 

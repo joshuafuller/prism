@@ -46,7 +46,9 @@ class FanOutResult:
 
 
 class FanOutCoordinator:
-    def __init__(self, *, per_reviewer_timeout: float = 300.0) -> None:
+    def __init__(self, *, per_reviewer_timeout: float = 1500.0) -> None:
+        # Wall-clock backstop per reviewer; the engine's liveness check is the primary
+        # mechanism (ADR-0015), so this is a generous overall cap.
         self._timeout = per_reviewer_timeout
 
     def gather_findings(self, jobs: list[ReviewerJob], context: str) -> FanOutResult:

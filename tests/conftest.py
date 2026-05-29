@@ -21,8 +21,16 @@ class FakeRunner:
         self._raise_timeout = raise_timeout
         self.calls: list[dict[str, object]] = []
 
-    def __call__(self, argv: list[str], stdin: str, timeout: float) -> CompletedProc:
-        self.calls.append({"argv": argv, "stdin": stdin, "timeout": timeout})
+    def __call__(
+        self,
+        argv: list[str],
+        stdin: str,
+        *,
+        inactivity_s: float = 0.0,
+        overall_s: float = 0.0,
+        heartbeat: object = None,
+    ) -> CompletedProc:
+        self.calls.append({"argv": argv, "stdin": stdin})
         if self._raise_timeout:
             raise TimeoutError("simulated timeout")
         return self._outputs[min(len(self.calls) - 1, len(self._outputs) - 1)]

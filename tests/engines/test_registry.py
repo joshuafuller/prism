@@ -23,14 +23,16 @@ def test_build_engine_api_kind_is_deferred() -> None:
         build_engine(EngineConfig(kind="anthropic-api", key_env="ANTHROPIC_API_KEY"))
 
 
-def test_build_engine_applies_timeout() -> None:
-    eng = build_engine(EngineConfig(kind="claude-cli"), timeout_s=600.0)
-    assert eng._timeout_s == 600.0
+def test_build_engine_applies_timeouts() -> None:
+    eng = build_engine(EngineConfig(kind="claude-cli"), inactivity_s=90.0, overall_s=1800.0)
+    assert eng._inactivity_s == 90.0
+    assert eng._overall_s == 1800.0
 
 
-def test_build_engines_uses_config_timeout() -> None:
-    engines = build_engines(load_config(EXAMPLE))  # example default = 600
-    assert engines["claude-cli"]._timeout_s == 600.0
+def test_build_engines_uses_config_timeouts() -> None:
+    engines = build_engines(load_config(EXAMPLE))  # example defaults: 120 / 1500
+    assert engines["claude-cli"]._inactivity_s == 120.0
+    assert engines["claude-cli"]._overall_s == 1500.0
 
 
 def test_build_engines_maps_each_named_engine() -> None:

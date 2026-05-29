@@ -47,8 +47,10 @@ class Config(BaseModel):
     reviewers: dict[str, ReviewerConfig]
     coordinator: CoordinatorConfig
     policy: PolicyConfig = PolicyConfig()
-    # Generous default so large/throttled reviews don't get a reviewer killed mid-flight.
-    per_reviewer_timeout: float = 600.0
+    # Liveness-based limits (ADR-0015): kill a reviewer only after this many seconds with
+    # NO output (hung), never for being slow; overall_timeout is a generous backstop cap.
+    inactivity_timeout: float = 120.0
+    overall_timeout: float = 1500.0
 
     @model_validator(mode="after")
     def _engine_refs_must_exist(self) -> Config:
