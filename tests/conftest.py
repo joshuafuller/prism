@@ -1,6 +1,8 @@
 """Shared test fixtures: a fake subprocess Runner so engines never call a real model."""
 
+import subprocess
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
@@ -48,3 +50,21 @@ def make_proc() -> Callable[..., CompletedProc]:
         return CompletedProc(code, stdout, stderr)
 
     return _make
+
+
+@pytest.fixture
+def git_repo(tmp_path: Path) -> Path:
+    """An initialized git repo on branch `main` with one base commit (a.py)."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def git(*args: str) -> None:
+        subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True, text=True)
+
+    git("init", "-q", "-b", "main")
+    git("config", "user.email", "test@example.com")
+    git("config", "user.name", "Test")
+    (repo / "a.py").write_text("x = 1\n")
+    git("add", "-A")
+    git("commit", "-q", "-m", "base")
+    return repo
