@@ -1,0 +1,18 @@
+# Architecture Decision Records
+
+Critical, architecturally-significant, or hard-to-reverse decisions are recorded here
+as ADRs. **Forcing an ADR is mandatory before locking any critical decision** during
+design.
+
+Format: lightweight Nygard (Context / Decision / Consequences). Use `template.md`.
+Number sequentially. Status is one of: Proposed | Accepted | Superseded by ADR-N |
+Deprecated.
+
+| ADR | Title | Status |
+|-----|-------|--------|
+| [0001](0001-subscription-cli-first-runtime.md) | Subscription-CLI-first runtime, API-key fallback | Accepted |
+| [0002](0002-native-docker-credential-mount-auth.md) | Native Docker packaging with mounted subscription credentials | Accepted |
+| [0003](0003-python-uv-tooling.md) | Python + uv (no pip / no manual venvs) | Accepted |
+| [0004](0004-github-first-via-gh-cli.md) | GitHub-first via the `gh` CLI behind a VCS abstraction | Accepted |
+| [0005](0005-beads-work-tracking.md) | Beads (`bd`) as the work-tracking system of record | Accepted |
+| [0006](0006-reasoning-effort-routing-knob.md) | Reasoning effort as a first-class routing knob | Accepted |

@@ -217,6 +217,9 @@ docker run --rm \
   the implementation plan becomes `bd` issues with dependencies (git-backed, survives
   sessions/compaction). TodoWrite is in-session scratch only.
 - **Methodology:** spec-driven (this doc) → implementation plan → TDD.
+- **ADRs:** every critical / architecturally-significant / hard-to-reverse decision is
+  recorded as an ADR in `docs/adr/` **before it is locked**. The decisions in this spec
+  are already captured as ADR-0001…0006.
 
 ## 12. Rollout (post-MVP roadmap)
 
