@@ -1,6 +1,11 @@
 #!/usr/bin/env sh
-# Run Prism natively in Docker, mounting the current repo and your subscription creds.
-# The CLIs authenticate with your existing logins; nothing is baked into the image.
+# Run Prism natively in Docker.
+#
+# Your subscription credentials are COPIED to a throwaway directory, and that copy is
+# mounted into the container — never your real ~/.claude, ~/.codex, ~/.config/gh. So a
+# compromised or prompt-injected in-container reviewer cannot read-modify-destroy your
+# host credentials; the copy is deleted on exit (prism-4gf.33). Token refreshes / CLI
+# logs land in the throwaway copy and are discarded.
 #
 #   bin/prism local --target main
 #   bin/prism local --target main --post-pr 42
@@ -11,8 +16,7 @@ set -eu
 
 IMAGE="${PRISM_IMAGE:-prism}"
 
-# Fail fast if a required credential path is missing — otherwise `docker -v` would
-# auto-create it as a root-owned directory on the host and break auth confusingly.
+# Required logins (fail fast — avoids docker auto-creating root-owned dirs for missing paths).
 for path in "$HOME/.claude" "$HOME/.codex" "$HOME/.config/gh"; do
     if [ ! -e "$path" ]; then
         echo "prism: missing $path — log in on the host first (claude, codex, gh auth login)" >&2
@@ -20,17 +24,30 @@ for path in "$HOME/.claude" "$HOME/.codex" "$HOME/.config/gh"; do
     fi
 done
 
-# ~/.claude.json is optional; only mount it (as a file) when it actually exists.
+# Throwaway copy of just the credentials the CLIs need (not host logs/caches/history).
+CREDS="$(mktemp -d "${TMPDIR:-/tmp}/prism-creds.XXXXXX")"
+trap 'rm -rf "$CREDS"' EXIT INT TERM
+mkdir -p "$CREDS/.claude" "$CREDS/.codex" "$CREDS/.config/gh"
+
+cp -a "$HOME/.claude/." "$CREDS/.claude/"
+rm -rf "$CREDS/.claude/daemon" "$CREDS/.claude/backups" "$CREDS/.claude/cache" \
+       "$CREDS/.claude/plugins" "$CREDS/.claude/projects" 2>/dev/null || true
+if [ -f "$HOME/.claude.json" ]; then cp -a "$HOME/.claude.json" "$CREDS/.claude.json"; fi
+if [ -f "$HOME/.codex/auth.json" ]; then cp -a "$HOME/.codex/auth.json" "$CREDS/.codex/"; fi
+if [ -f "$HOME/.codex/config.toml" ]; then cp -a "$HOME/.codex/config.toml" "$CREDS/.codex/"; fi
+cp -a "$HOME/.config/gh/." "$CREDS/.config/gh/"
+
 claude_json_mount=""
-if [ -f "$HOME/.claude.json" ]; then
-    claude_json_mount="-v $HOME/.claude.json:/home/app/.claude.json"
+if [ -f "$CREDS/.claude.json" ]; then
+    claude_json_mount="-v $CREDS/.claude.json:/home/app/.claude.json"
 fi
 
+# Not `exec` — the EXIT trap must run afterward to delete the credential copy.
 # shellcheck disable=SC2086 # word-splitting of the optional mount is intended
-exec docker run --rm -i \
+docker run --rm -i \
     -v "$PWD":/repo \
-    -v "$HOME/.claude":/home/app/.claude \
+    -v "$CREDS/.claude":/home/app/.claude \
     $claude_json_mount \
-    -v "$HOME/.codex":/home/app/.codex \
-    -v "$HOME/.config/gh":/home/app/.config/gh \
+    -v "$CREDS/.codex":/home/app/.codex \
+    -v "$CREDS/.config/gh":/home/app/.config/gh \
     "$IMAGE" "$@"

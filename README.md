@@ -89,9 +89,10 @@ bin/prism local --target main           # review your branch vs main → report.
 bin/prism local --target main --post-pr 42   # also post a summary to GitHub PR #42
 ```
 
-`bin/prism` mounts your repo plus `~/.claude`, `~/.codex`, and `~/.config/gh` into the
-container, so the CLIs authenticate with your existing logins — subscriptions work inside
-the container with **no API key in the environment** (see ADR-0002).
+`bin/prism` mounts your repo and a **throwaway copy** of your `~/.claude` / `~/.codex` /
+`~/.config/gh` credentials, so the CLIs authenticate with your existing logins while your
+real host credentials stay untouched (a prompt-injected reviewer can't tamper with them).
+Subscriptions work inside the container with **no API key in the environment** (ADR-0002).
 
 **Locally (if you have the CLIs + uv on the host):**
 
