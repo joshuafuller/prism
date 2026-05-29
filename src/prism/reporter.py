@@ -20,7 +20,7 @@ def _render_finding(finding: Finding) -> str:
     )
 
 
-def to_markdown(result: ReviewResult) -> str:
+def to_markdown(result: ReviewResult, *, skipped: list[tuple[str, str]] | None = None) -> str:
     lines = [f"# Prism review: {result.decision.value}", "", result.summary]
 
     if result.findings:
@@ -34,6 +34,12 @@ def to_markdown(result: ReviewResult) -> str:
     else:
         lines.append("")
         lines.append("No findings. 🎉")
+
+    # No silent truncation (ADR-0012): an incomplete review must look incomplete.
+    if skipped:
+        lines.append("")
+        lines.append(f"## Reviewers skipped ({len(skipped)})")
+        lines.extend(f"- **{name}** — {reason}" for name, reason in skipped)
 
     lines.extend(["", "---", _LIMITATIONS])
     return "\n".join(lines) + "\n"

@@ -62,17 +62,24 @@ def run_local_review(
     coordinator = FanOutCoordinator()
     fanout = coordinator.gather_findings(jobs, context)
 
+    # Surface skipped reviewers to the coordinator too, so an incomplete review is judged
+    # as incomplete rather than silently treated as clean (ADR-0012: no silent truncation).
+    judge_context = context
+    if fanout.skipped:
+        notes = "\n".join(f"- {name}: {reason}" for name, reason in fanout.skipped)
+        judge_context = f"{context}\n\n## Reviewers that did not complete\n{notes}"
+
     coord_engine = engines[config.coordinator.engine]
     coord_model = config.engines[config.coordinator.engine].model
     result = coordinator.judge(
         fanout.findings,
-        context,
+        judge_context,
         engine=coord_engine,
         effort=config.coordinator.effort,
         model=coord_model,
     )
 
-    report = to_markdown(result)
+    report = to_markdown(result, skipped=fanout.skipped)
     prism_dir = Path(repo) / ".prism"
     prism_dir.mkdir(parents=True, exist_ok=True)
     (prism_dir / "report.md").write_text(report)
