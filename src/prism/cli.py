@@ -103,4 +103,5 @@ def main(argv: list[str] | None = None) -> int:
     config = load_config(args.config)
     result = run_local_review(config, args.target, args.repo, post_pr=args.post_pr)
     print(to_markdown(result))
-    return 1 if result.decision is config.policy.fail_on else 0
+    # Fail CI when the decision is at least as severe as the configured threshold (ADR-0011).
+    return 1 if result.decision.at_least(config.policy.fail_on) else 0

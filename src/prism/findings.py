@@ -41,9 +41,26 @@ class Decision(StrEnum):
     SIGNIFICANT_CONCERNS = "significant_concerns"
 
     @property
+    def rank(self) -> int:
+        """Severity rank for ordering (approved=0 … significant_concerns=3)."""
+        return _DECISION_RANK[self]
+
+    def at_least(self, other: Decision) -> bool:
+        """True if this decision is at least as severe as ``other`` (ADR-0011)."""
+        return self.rank >= other.rank
+
+    @property
     def blocks(self) -> bool:
         """Whether this decision should block the merge (fail CI)."""
         return self is Decision.SIGNIFICANT_CONCERNS
+
+
+_DECISION_RANK = {
+    Decision.APPROVED: 0,
+    Decision.APPROVED_WITH_COMMENTS: 1,
+    Decision.MINOR_ISSUES: 2,
+    Decision.SIGNIFICANT_CONCERNS: 3,
+}
 
 
 class Finding(BaseModel):
