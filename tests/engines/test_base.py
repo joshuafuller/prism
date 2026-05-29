@@ -8,6 +8,7 @@ from prism.engines.base import (
     Effort,
     Engine,
     EngineAuthError,
+    EngineError,
     EngineRetryable,
     EngineTimeout,
     ParsedResult,
@@ -77,3 +78,11 @@ def test_rate_limit_is_retryable(fake_runner, make_proc) -> None:
     r = fake_runner([make_proc("", code=1, stderr="Error: 429 too many requests")])
     with pytest.raises(EngineRetryable):
         DummyEngine(runner=r).run("p")
+
+
+def test_generic_nonzero_exit_raises_plain_engine_error(fake_runner, make_proc) -> None:
+    r = fake_runner([make_proc("", code=2, stderr="boom: something unexpected")])
+    with pytest.raises(EngineError) as exc:
+        DummyEngine(runner=r).run("p")
+    # The generic branch, not the auth/retryable subclasses.
+    assert type(exc.value) is EngineError

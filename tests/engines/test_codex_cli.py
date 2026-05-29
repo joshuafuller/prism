@@ -42,6 +42,13 @@ def test_model_flag_added_only_when_given(fake_runner, make_proc) -> None:
     assert "--model" not in r2.last_argv
 
 
+def test_parse_ignores_malformed_and_nondict_lines(fake_runner, make_proc) -> None:
+    good = {"type": "item.completed", "item": {"type": "agent_message", "text": "clean"}}
+    out = "\n".join(["garbage-not-json", json.dumps(42), json.dumps(good)])
+    res = CodexCLIEngine(runner=fake_runner([make_proc(out)])).run("p")
+    assert res.text == "clean"
+
+
 def test_parses_agent_message_and_usage(fake_runner, make_proc) -> None:
     out = _stream(
         {"type": "thread.started"},

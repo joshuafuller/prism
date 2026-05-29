@@ -51,6 +51,19 @@ def test_parses_result_text_and_usage(fake_runner, make_proc) -> None:
     assert res.finish_reason == "end_turn"
 
 
+def test_parse_ignores_malformed_empty_and_nondict_lines(fake_runner, make_proc) -> None:
+    out = "\n".join(
+        [
+            "this is not json",
+            json.dumps(["not", "a", "dict"]),
+            "",
+            json.dumps({"type": "result", "result": "clean"}),
+        ]
+    )
+    res = ClaudeCLIEngine(runner=fake_runner([make_proc(out)])).run("p")
+    assert res.text == "clean"
+
+
 def test_parse_tolerates_null_message_and_usage(fake_runner, make_proc) -> None:
     # Real CLIs occasionally emit null fields; the parser must degrade, not crash.
     out = _stream(
