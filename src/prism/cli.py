@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
+from datetime import UTC, datetime
 from pathlib import Path
 
 from prism.config import Config, load_config
@@ -22,6 +24,7 @@ from prism.engines.registry import build_engines
 from prism.findings import ReviewResult
 from prism.reporter import to_markdown
 from prism.risk import RiskTier, assess_risk_tier
+from prism.telemetry import emit, record_from_result
 from prism.vcs.base import VCSProvider
 from prism.vcs.github import GitHubProvider
 from prism.workspace import build_workspace
@@ -51,6 +54,7 @@ def run_local_review(
     post_pr: int | None = None,
 ) -> ReviewResult:
     """Run a full local review and return the judged result (engines injectable for tests)."""
+    start = time.perf_counter()
     engines = engines or build_engines(config)
     filtered = filter_diff(GitDiffSource(target, repo).changed_files())
     context = _build_context(target, filtered)
@@ -95,6 +99,20 @@ def run_local_review(
     (prism_dir / "report.md").write_text(report)
     (prism_dir / "findings.json").write_text(
         json.dumps([f.model_dump(mode="json") for f in result.findings], indent=2)
+    )
+
+    # Fire-and-forget telemetry (never breaks the review).
+    emit(
+        record_from_result(
+            result,
+            timestamp=datetime.now(UTC).isoformat(),
+            target=target,
+            tier=tier.value,
+            reviewers_run=[job.name for job in jobs],
+            reviewers_skipped=[name for name, _ in skipped],
+            duration_s=time.perf_counter() - start,
+        ),
+        prism_dir / "telemetry.jsonl",
     )
 
     if post_pr is not None:
