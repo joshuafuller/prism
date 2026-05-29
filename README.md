@@ -18,8 +18,8 @@ Prism splits a diff into specialized reviewer "wavelengths" (security, code qual
 runs them concurrently, and recombines their findings through a coordinator that
 deduplicates, filters false positives, and produces one structured verdict. It's modeled
 on [Cloudflare's AI code review architecture](https://blog.cloudflare.com/ai-code-review/),
-adapted to drive the `claude` and `codex` CLIs so reviews cost **$0 in marginal tokens**
-when you have the subscriptions.
+adapted to drive the `claude` and `codex` CLIs, so reviews run on subscriptions you
+already pay for rather than metered per-token API billing.
 
 > **Status: working MVP.** `prism local` reviews a diff end-to-end on your subscriptions,
 > in Docker or locally, and posts to a GitHub PR. It even reviews its own repo — Prism
@@ -42,7 +42,7 @@ flowchart LR
     DIFF --> WS["filter noise<br/>+ workspace · .prism/"]
     WS --> COORD{{"Coordinator"}}
 
-    subgraph REV ["reviewers · run concurrently · via claude / codex (subscriptions, $0)"]
+    subgraph REV ["reviewers · run concurrently · via claude / codex (subscriptions)"]
         direction TB
         SEC["security"]
         CQ["code quality"]
