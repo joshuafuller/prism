@@ -1,0 +1,78 @@
+import json
+import subprocess
+from pathlib import Path
+
+from prism import cli
+from prism.config import load_config
+from prism.engines.base import Effort, ParsedResult
+from prism.findings import Decision, ReviewResult
+
+EXAMPLE = Path(__file__).resolve().parent.parent / "prism.example.yaml"
+
+
+class ScriptedEngine:
+    """Dispatches on prompt: coordinator -> verdict JSON, reviewer -> empty findings."""
+
+    def run(self, prompt: str, *, effort: Effort, model: str | None = None) -> ParsedResult:
+        if "Review Coordinator" in prompt:
+            verdict = {
+                "decision": "approved_with_comments",
+                "summary": "Looks fine.",
+                "findings": [],
+            }
+            return ParsedResult(text=json.dumps(verdict))
+        return ParsedResult(text="[]")
+
+
+class FakeProvider:
+    def __init__(self) -> None:
+        self.posted: tuple[int, str] | None = None
+
+    def auth_account(self) -> str:
+        return "joshuafuller"
+
+    def post_summary(self, pr: int, body: str) -> None:
+        self.posted = (pr, body)
+
+
+def _repo_with_change(repo: Path) -> None:
+    def git(*args: str) -> None:
+        subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True, text=True)
+
+    git("checkout", "-q", "-b", "feature")
+    (repo / "a.py").write_text("x = 2\n")
+    git("add", "-A")
+    git("commit", "-q", "-m", "change")
+
+
+def test_run_local_review_end_to_end(git_repo: Path) -> None:
+    _repo_with_change(git_repo)
+    engine = ScriptedEngine()
+    provider = FakeProvider()
+    result = cli.run_local_review(
+        load_config(EXAMPLE),
+        target="main",
+        repo=git_repo,
+        engines={"claude-cli": engine, "codex-cli": engine},
+        provider=provider,
+        post_pr=42,
+    )
+    assert isinstance(result, ReviewResult)
+    assert result.decision is Decision.APPROVED_WITH_COMMENTS
+    assert (git_repo / ".prism" / "report.md").read_text().count("Prism review") == 1
+    assert json.loads((git_repo / ".prism" / "findings.json").read_text()) == []
+    assert provider.posted is not None and provider.posted[0] == 42
+
+
+def test_main_exits_1_on_significant_concerns(monkeypatch) -> None:
+    blocked = ReviewResult(findings=[], decision=Decision.SIGNIFICANT_CONCERNS, summary="bad")
+    monkeypatch.setattr(cli, "run_local_review", lambda *a, **k: blocked)
+    code = cli.main(["local", "--target", "main", "--config", str(EXAMPLE), "--repo", "."])
+    assert code == 1
+
+
+def test_main_exits_0_on_approved(monkeypatch) -> None:
+    ok = ReviewResult(findings=[], decision=Decision.APPROVED, summary="ok")
+    monkeypatch.setattr(cli, "run_local_review", lambda *a, **k: ok)
+    code = cli.main(["local", "--target", "main", "--config", str(EXAMPLE), "--repo", "."])
+    assert code == 0
