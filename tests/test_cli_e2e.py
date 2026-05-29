@@ -2,6 +2,8 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from prism import cli
 from prism.config import load_config
 from prism.engines.base import Effort, ParsedResult
@@ -198,6 +200,20 @@ def test_telemetry_path_from_env(git_repo: Path, tmp_path: Path, monkeypatch) ->
         engines={"claude-cli": engine, "codex-cli": engine},
     )
     assert out.exists()
+
+
+def test_missing_reviewer_prompt_fails_loudly(git_repo: Path, tmp_path: Path) -> None:
+    _repo_with_change(git_repo)
+    cfg = tmp_path / "prism.yaml"
+    cfg.write_text(
+        "engines:\n  claude-cli: {kind: claude-cli}\n"
+        "reviewers:\n  ghost: {engine: claude-cli}\n"
+        "coordinator: {engine: claude-cli}\n"
+    )
+    with pytest.raises(ValueError, match="ghost"):
+        cli.run_local_review(
+            load_config(cfg), target="main", repo=git_repo, engines={"claude-cli": ScriptedEngine()}
+        )
 
 
 def test_main_exits_1_on_significant_concerns(monkeypatch) -> None:
