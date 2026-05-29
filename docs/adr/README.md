@@ -23,3 +23,4 @@ Deprecated.
 | [0011](0011-decision-ordering-and-fail-on-semantics.md) | Decision severity ordering and `policy.fail_on` semantics | Accepted |
 | [0012](0012-enforced-cross-cutting-invariants.md) | Enforced cross-cutting invariants | Accepted |
 | [0013](0013-risk-tiers.md) | Risk tiers — scale reviewers/effort by diff | Accepted |
+| [0014](0014-ast-based-risk-escalation.md) | AST-based risk escalation | Accepted |
