@@ -9,9 +9,11 @@ on [Cloudflare's AI code review architecture](https://blog.cloudflare.com/ai-cod
 adapted to drive the `claude` and `codex` CLIs so reviews cost **$0 in marginal tokens**
 when you have the subscriptions.
 
-> **Status: early development.** The design is locked and the foundation is being built
-> test-first. It is **not yet a working tool** — follow the build in [beads](#work-tracking)
-> and the [implementation plan](docs/superpowers/plans/2026-05-29-prism-mvp.md).
+> **Status: working MVP.** `prism local` reviews a diff end-to-end on your subscriptions,
+> in Docker or locally, and posts to a GitHub PR. It even reviews its own repo — Prism
+> caught real issues in its own Docker wrapper during development. Roadmap and remaining
+> work live in [beads](#work-tracking) and the
+> [implementation plan](docs/superpowers/plans/2026-05-29-prism-mvp.md).
 
 ## Why it exists
 
@@ -51,18 +53,39 @@ See the [design spec](docs/superpowers/specs/2026-05-29-prism-mvp-design.md), th
 [architecture decisions](docs/adr/), and the
 [lessons we built on](docs/reference/cloudflare-lessons.md).
 
-## Running it (target UX — not all wired yet)
+## Running it
 
-Prism runs **natively in Docker**; your subscription credentials are mounted from the host:
+Add a `prism.yaml` to your repo (copy `prism.example.yaml`), then:
+
+**In Docker (recommended — no host Python needed):**
 
 ```bash
-bin/prism local --target main          # review working branch vs main → report.md
+docker build -t prism .                 # once (use --build-arg APP_UID="$(id -u)" if your uid != 1000)
+bin/prism local --target main           # review your branch vs main → report.md
 bin/prism local --target main --post-pr 42   # also post a summary to GitHub PR #42
 ```
 
-Under the hood that mounts `~/.claude`, `~/.codex`, and `~/.config/gh` into the container,
-so the CLIs authenticate with your existing logins. (Proven: the subscription CLIs
-authenticate inside the container with **no API key in the environment** — see ADR-0002.)
+`bin/prism` mounts your repo plus `~/.claude`, `~/.codex`, and `~/.config/gh` into the
+container, so the CLIs authenticate with your existing logins — subscriptions work inside
+the container with **no API key in the environment** (see ADR-0002).
+
+**Locally (if you have the CLIs + uv on the host):**
+
+```bash
+uv run prism local --target main --config prism.example.yaml
+```
+
+Exit code is nonzero only when the decision matches your `policy.fail_on`
+(default `significant_concerns`), so it drops cleanly into CI.
+
+## Add your own reviewer
+
+Reviewers are markdown, not code (ADR-0009):
+
+1. Write `agents/<name>.md` with `## What to Flag` / `## What NOT to Flag` sections.
+2. Add it to `prism.yaml` under `reviewers:` with an `engine` and `effort`.
+
+That's it — no core code change.
 
 ## Developing
 
