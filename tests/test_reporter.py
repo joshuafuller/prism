@@ -47,6 +47,19 @@ def test_includes_limitations_note() -> None:
     assert "not a replacement for human review" in md.lower()
 
 
+def test_renders_skipped_reviewers_section() -> None:
+    result = ReviewResult(findings=[], decision=Decision.APPROVED, summary="s")
+    md = to_markdown(result, skipped=[("security", "timed out after 300s")])
+    assert "Reviewers skipped" in md
+    assert "security" in md
+    assert "timed out after 300s" in md
+
+
+def test_no_skipped_section_when_none_skipped() -> None:
+    md = to_markdown(ReviewResult(findings=[], decision=Decision.APPROVED, summary="s"))
+    assert "Reviewers skipped" not in md
+
+
 def test_suggestion_severity_rendered() -> None:
     result = ReviewResult(
         findings=[_f("suggestion", "Nice to have")],

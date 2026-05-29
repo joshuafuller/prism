@@ -24,6 +24,13 @@ class ScriptedEngine:
         return ParsedResult(text="[]")
 
 
+class FailingEngine:
+    """Always returns unparseable output -> reviewer fails and is skipped."""
+
+    def run(self, prompt: str, *, effort: Effort, model: str | None = None) -> ParsedResult:
+        return ParsedResult(text="not valid json")
+
+
 class FakeProvider:
     def __init__(self) -> None:
         self.posted: tuple[int, str] | None = None
@@ -62,6 +69,16 @@ def test_run_local_review_end_to_end(git_repo: Path) -> None:
     assert (git_repo / ".prism" / "report.md").read_text().count("Prism review") == 1
     assert json.loads((git_repo / ".prism" / "findings.json").read_text()) == []
     assert provider.posted is not None and provider.posted[0] == 42
+
+
+def test_run_local_review_surfaces_skipped_reviewer(git_repo: Path) -> None:
+    _repo_with_change(git_repo)
+    # security -> codex-cli (fails), code_quality + coordinator -> claude-cli (scripted)
+    engines = {"claude-cli": ScriptedEngine(), "codex-cli": FailingEngine()}
+    cli.run_local_review(load_config(EXAMPLE), target="main", repo=git_repo, engines=engines)
+    report = (git_repo / ".prism" / "report.md").read_text()
+    assert "Reviewers skipped" in report
+    assert "security" in report
 
 
 def test_main_exits_1_on_significant_concerns(monkeypatch) -> None:
