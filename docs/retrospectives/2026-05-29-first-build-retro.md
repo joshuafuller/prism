@@ -92,6 +92,25 @@ built. Three decisions *will* need an ADR when we act on them:
 **Optional now:** a lightweight ADR codifying the cross-cutting invariants as *enforced*
 principles, given we just shipped a violation of one. Cheap insurance against recurrence.
 
+## Addendum — real-repo validation (external, anonymized)
+
+Ran Prism (local mode, full tier) against **one merged, already-human-reviewed change
+(~200 lines, ~5 files) in an unrelated private repository** as a real-world data point.
+Kept deliberately general — the repo and findings are private:
+
+- **Decision: `minor_issues`** (did not block) — calibrated, not noisy.
+- **2 warnings, 0 critical, 0 false positives, 0 style/nitpick noise.**
+- One warning identified a **subtle interaction between two changes in the same diff**
+  (one silently undermines the other) — a cross-cutting issue easy for humans to miss,
+  and which had **already passed human review and merged**.
+- The other was a security-adjacent observation raised with **nuance**: rather than
+  over-escalating to "critical," the coordinator reasoned about likely *inherited*
+  authorization and downgraded it to "verify this," with a concrete check + test to add.
+
+**Takeaway:** the review-quality thesis (specialized reviewers + what-NOT-to-flag + a
+calibrated judge pass) holds on an external codebase, not just our own — low noise, no
+hallucinations, and a genuinely useful catch on already-merged code.
+
 ## Action items (tracked in beads)
 
 - Fix self-review bugs: `.36` (silent skip), `.37` (exit-code ordering — likely ADR-0011).
