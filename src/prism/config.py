@@ -16,6 +16,7 @@ from pydantic import BaseModel, model_validator
 
 from prism.engines.base import Effort
 from prism.findings import Decision
+from prism.risk import RiskTier
 
 EngineKind = Literal["claude-cli", "codex-cli", "anthropic-api", "openai-api"]
 
@@ -29,6 +30,7 @@ class EngineConfig(BaseModel):
 class ReviewerConfig(BaseModel):
     engine: str
     effort: Effort = Effort.MEDIUM
+    min_tier: RiskTier = RiskTier.TRIVIAL  # runs when assessed tier >= this (ADR-0013)
 
 
 class CoordinatorConfig(BaseModel):

@@ -17,10 +17,11 @@ from prism.config import Config, load_config
 from prism.coordinator import FanOutCoordinator, ReviewerJob
 from prism.diff.filter import FilterResult, filter_diff
 from prism.diff.source import GitDiffSource
-from prism.engines.base import Engine
+from prism.engines.base import Effort, Engine
 from prism.engines.registry import build_engines
 from prism.findings import ReviewResult
 from prism.reporter import to_markdown
+from prism.risk import RiskTier, assess_risk_tier
 from prism.vcs.base import VCSProvider
 from prism.vcs.github import GitHubProvider
 from prism.workspace import build_workspace
@@ -55,31 +56,40 @@ def run_local_review(
     context = _build_context(target, filtered)
     build_workspace(filtered.kept, context, repo)
 
-    jobs = [
-        ReviewerJob(name, rc, engines[rc.engine], config.engines[rc.engine].model)
-        for name, rc in config.reviewers.items()
-    ]
+    # Risk tier selects which reviewers run and the coordinator's effort (ADR-0013).
+    tier = assess_risk_tier(filtered.kept)
+    jobs: list[ReviewerJob] = []
+    tier_skipped: list[tuple[str, str]] = []
+    for name, rc in config.reviewers.items():
+        if tier.rank >= rc.min_tier.rank:
+            jobs.append(ReviewerJob(name, rc, engines[rc.engine], config.engines[rc.engine].model))
+        else:
+            reason = f"not run: requires '{rc.min_tier}' tier (diff is '{tier}')"
+            tier_skipped.append((name, reason))
+
     coordinator = FanOutCoordinator()
     fanout = coordinator.gather_findings(jobs, context)
+    skipped = tier_skipped + fanout.skipped
 
     # Surface skipped reviewers to the coordinator too, so an incomplete review is judged
     # as incomplete rather than silently treated as clean (ADR-0012: no silent truncation).
     judge_context = context
-    if fanout.skipped:
-        notes = "\n".join(f"- {name}: {reason}" for name, reason in fanout.skipped)
-        judge_context = f"{context}\n\n## Reviewers that did not complete\n{notes}"
+    if skipped:
+        notes = "\n".join(f"- {name}: {reason}" for name, reason in skipped)
+        judge_context = f"{context}\n\n## Reviewers not run / incomplete\n{notes}"
 
     coord_engine = engines[config.coordinator.engine]
     coord_model = config.engines[config.coordinator.engine].model
+    coord_effort = Effort.LOW if tier is RiskTier.TRIVIAL else config.coordinator.effort
     result = coordinator.judge(
         fanout.findings,
         judge_context,
         engine=coord_engine,
-        effort=config.coordinator.effort,
+        effort=coord_effort,
         model=coord_model,
     )
 
-    report = to_markdown(result, skipped=fanout.skipped)
+    report = to_markdown(result, skipped=skipped)
     prism_dir = Path(repo) / ".prism"
     prism_dir.mkdir(parents=True, exist_ok=True)
     (prism_dir / "report.md").write_text(report)
