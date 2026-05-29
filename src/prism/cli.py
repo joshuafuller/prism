@@ -15,6 +15,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+from prism.ast_risk import ast_risk_labels
 from prism.config import Config, load_config
 from prism.coordinator import FanOutCoordinator, ReviewerJob
 from prism.diff.filter import FilterResult, filter_diff
@@ -30,9 +31,13 @@ from prism.vcs.github import GitHubProvider
 from prism.workspace import build_workspace
 
 
-def _build_context(target: str, filtered: FilterResult) -> str:
+def _build_context(target: str, filtered: FilterResult, risk_signals: list[str]) -> str:
     lines = [f"Reviewing changes against target: {target}", "", "## Changed files"]
     lines += [f"- {f.path} (+{f.added}/-{f.removed})" for f in filtered.kept]
+    if risk_signals:
+        lines.append("")
+        lines.append("## Risk signals (AST)")
+        lines += [f"- {s}" for s in risk_signals]
     if filtered.skipped:
         lines.append("")
         lines.append("## Skipped (noise)")
@@ -42,6 +47,21 @@ def _build_context(target: str, filtered: FilterResult) -> str:
     for f in filtered.kept:
         lines.append(f"\n### {f.path}\n```diff\n{f.patch}\n```")
     return "\n".join(lines)
+
+
+def _ast_risk_signals(filtered: FilterResult, repo: Path | str) -> list[str]:
+    """Risky constructs the diff introduced in changed Python files (ADR-0014)."""
+    signals: list[str] = []
+    for f in filtered.kept:
+        if not f.path.endswith(".py"):
+            continue
+        try:
+            new_source = (Path(repo) / f.path).read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for label in ast_risk_labels(new_source, f.patch):
+            signals.append(f"{f.path}: introduces {label}")
+    return signals
 
 
 def run_local_review(
@@ -57,11 +77,16 @@ def run_local_review(
     start = time.perf_counter()
     engines = engines or build_engines(config)
     filtered = filter_diff(GitDiffSource(target, repo).changed_files())
-    context = _build_context(target, filtered)
-    build_workspace(filtered.kept, context, repo)
 
     # Risk tier selects which reviewers run and the coordinator's effort (ADR-0013).
+    # An AST risk signal escalates to full even on a tiny diff (ADR-0014).
     tier = assess_risk_tier(filtered.kept)
+    risk_signals = _ast_risk_signals(filtered, repo)
+    if risk_signals:
+        tier = RiskTier.FULL
+
+    context = _build_context(target, filtered, risk_signals)
+    build_workspace(filtered.kept, context, repo)
     jobs: list[ReviewerJob] = []
     tier_skipped: list[tuple[str, str]] = []
     for name, rc in config.reviewers.items():
