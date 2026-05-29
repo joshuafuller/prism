@@ -1,5 +1,9 @@
 # Prism
 
+<p align="center">
+  <img src="docs/assets/prism-banner.png" alt="A code diff enters a prism and refracts into a spectrum of specialized reviewer wavelengths, recombined into a single verdict" width="100%">
+</p>
+
 **AI code review orchestration that runs on your Claude/Codex subscriptions — not per-token API billing.**
 
 Prism splits a diff into specialized reviewer "wavelengths" (security, code quality, …),
