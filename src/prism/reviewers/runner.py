@@ -8,17 +8,15 @@ is asked once more for clean JSON before giving up.
 from __future__ import annotations
 
 import json
-import re
 
 from pydantic import ValidationError
 
 from prism.config import ReviewerConfig
 from prism.engines.base import Engine
 from prism.findings import Finding
+from prism.jsonio import strip_code_fence
 from prism.prompts import build_prompt
 
-_FENCE_OPEN = re.compile(r"^```[a-zA-Z0-9]*\n")
-_FENCE_CLOSE = re.compile(r"\n```$")
 _REPAIR_SUFFIX = (
     "\n\nYour previous reply was not valid JSON. "
     "Return ONLY the JSON array of findings, with no prose or code fences."
@@ -29,18 +27,10 @@ class ReviewerOutputError(RuntimeError):
     """A reviewer did not return valid findings JSON, even after one repair retry."""
 
 
-def _strip_code_fence(text: str) -> str:
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = _FENCE_OPEN.sub("", stripped)
-        stripped = _FENCE_CLOSE.sub("", stripped.strip())
-    return stripped.strip()
-
-
 def _parse_findings(text: str, reviewer_name: str) -> list[Finding] | None:
     """Parse a findings JSON array, or return None if it can't be parsed/validated."""
     try:
-        data = json.loads(_strip_code_fence(text))
+        data = json.loads(strip_code_fence(text))
     except json.JSONDecodeError:
         return None
     if not isinstance(data, list):
