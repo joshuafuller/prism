@@ -36,21 +36,33 @@ pass**, and **structured findings**, biased hard toward signal over noise.
 
 ## How it works
 
-```
-prism local --target main
-   │
-   ▼
-DiffSource ──► Workspace ──► Coordinator ──► Reporter
-(git / gh)     (.prism/)        │            (report.md
-                                │             + GitHub PR post)
-                       reviewers run concurrently
-                                │
-                        ┌───────┴────────┐
-                   code_quality       security
-                        │                │
-                        └───► Engine ◄───┘
-            claude-cli │ codex-cli  (subscriptions, $0)
-            anthropic-api │ openai-api  (optional, pay-per-token)
+```mermaid
+flowchart LR
+    IN["prism local --target main"] --> DIFF["DiffSource<br/>git diff · gh pr diff"]
+    DIFF --> WS["filter noise<br/>+ workspace · .prism/"]
+    WS --> COORD{{"Coordinator"}}
+
+    subgraph REV ["reviewers · run concurrently · via claude / codex (subscriptions, $0)"]
+        direction TB
+        SEC["security"]
+        CQ["code quality"]
+        PERF["performance"]
+    end
+
+    COORD -->|"fan out · risk-tiered"| SEC & CQ & PERF
+    SEC & CQ & PERF -->|"structured findings"| JUDGE{{"judge pass<br/>dedupe · filter · decide"}}
+    JUDGE --> OUT["report.md + findings.json<br/>+ GitHub PR comment"]
+
+    classDef io fill:#30363d,stroke:#8b949e,color:#ffffff;
+    classDef coord fill:#6e40c9,stroke:#d2c5ff,color:#ffffff;
+    classDef sec fill:#cf222e,stroke:#ffb3ae,color:#ffffff;
+    classDef cq fill:#1f6feb,stroke:#b6d3ff,color:#ffffff;
+    classDef perf fill:#1a7f37,stroke:#aee0ba,color:#ffffff;
+    class IN,DIFF,WS,OUT io;
+    class COORD,JUDGE coord;
+    class SEC sec;
+    class CQ cq;
+    class PERF perf;
 ```
 
 - **Engine** is the single LLM chokepoint. Default engines shell out to the subscription
