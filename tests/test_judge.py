@@ -41,6 +41,19 @@ def _verdict(decision: str, findings: list[dict[str, object]]) -> str:
     return json.dumps({"decision": decision, "summary": "s", "findings": findings})
 
 
+class RawJudgeEngine:
+    def run(self, prompt: str, *, effort: Effort, model: str | None = None) -> ParsedResult:
+        return ParsedResult(
+            text=_verdict("approved", []), raw='{"type":"tool_use","name":"Read"}\n'
+        )
+
+
+def test_judge_persists_coordinator_transcript(tmp_path) -> None:
+    coord = FanOutCoordinator(transcript_dir=tmp_path)
+    coord.judge([], "ctx", engine=RawJudgeEngine())
+    assert (tmp_path / "coordinator.jsonl").read_text() == '{"type":"tool_use","name":"Read"}\n'
+
+
 def test_judge_parses_review_result() -> None:
     verdict = _verdict("approved_with_comments", [_finding().model_dump(mode="json")])
     engine = CaptureEngine([verdict])

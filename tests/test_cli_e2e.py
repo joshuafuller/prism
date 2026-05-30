@@ -33,6 +33,16 @@ class FailingEngine:
         return ParsedResult(text="not valid json")
 
 
+class RawAllEngine:
+    """Returns a raw event stream for both reviewer and coordinator calls."""
+
+    def run(self, prompt: str, *, effort: Effort, model: str | None = None) -> ParsedResult:
+        if "Review Coordinator" in prompt:
+            verdict = {"decision": "approved_with_comments", "summary": "ok", "findings": []}
+            return ParsedResult(text=json.dumps(verdict), raw='{"role":"coordinator"}\n')
+        return ParsedResult(text="[]", raw='{"role":"reviewer"}\n')
+
+
 class RecordingEngine:
     """Returns empty findings and counts how many times it was called."""
 
@@ -82,6 +92,21 @@ def test_run_local_review_end_to_end(git_repo: Path) -> None:
     assert (git_repo / ".prism" / "report.md").read_text().count("Prism review") == 1
     assert json.loads((git_repo / ".prism" / "findings.json").read_text()) == []
     assert provider.posted is not None and provider.posted[0] == 42
+
+
+def test_run_local_review_persists_run_transcripts(git_repo: Path) -> None:
+    _repo_with_change(git_repo)
+    eng = RawAllEngine()
+    cli.run_local_review(
+        load_config(EXAMPLE),
+        target="main",
+        repo=git_repo,
+        engines={"claude-cli": eng, "codex-cli": eng},
+    )
+    runs = git_repo / ".prism" / "runs"
+    assert (runs / "coordinator.jsonl").read_text() == '{"role":"coordinator"}\n'
+    # at least one reviewer transcript was captured too
+    assert any(p.name != "coordinator.jsonl" for p in runs.glob("*.jsonl"))
 
 
 def test_run_local_review_surfaces_skipped_reviewer(git_repo: Path) -> None:

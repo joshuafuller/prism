@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass
+from pathlib import Path
 
 from pydantic import ValidationError
 
@@ -20,6 +21,7 @@ from prism.findings import Finding, ReviewResult
 from prism.jsonio import extract_json_object, strip_code_fence
 from prism.prompts import build_prompt
 from prism.reviewers.runner import run_reviewer
+from prism.transcripts import write_transcript
 
 _JUDGE_REPAIR = (
     "\n\nYour previous reply was not valid JSON. Return ONLY the JSON object "
@@ -46,10 +48,17 @@ class FanOutResult:
 
 
 class FanOutCoordinator:
-    def __init__(self, *, per_reviewer_timeout: float = 1500.0) -> None:
+    def __init__(
+        self,
+        *,
+        per_reviewer_timeout: float = 1500.0,
+        transcript_dir: Path | str | None = None,
+    ) -> None:
         # Wall-clock backstop per reviewer; the engine's liveness check is the primary
         # mechanism (ADR-0015), so this is a generous overall cap.
         self._timeout = per_reviewer_timeout
+        # When set, each reviewer + the coordinator persist their raw event stream here.
+        self._transcript_dir = transcript_dir
 
     def gather_findings(self, jobs: list[ReviewerJob], context: str) -> FanOutResult:
         """Run all reviewer jobs concurrently; aggregate findings, record skips."""
@@ -59,7 +68,13 @@ class FanOutCoordinator:
         async def run_one(job: ReviewerJob) -> list[Finding]:
             return await asyncio.wait_for(
                 asyncio.to_thread(
-                    run_reviewer, job.name, job.config, job.engine, context, model=job.model
+                    run_reviewer,
+                    job.name,
+                    job.config,
+                    job.engine,
+                    context,
+                    model=job.model,
+                    transcript_dir=self._transcript_dir,
                 ),
                 timeout=self._timeout,
             )
@@ -89,9 +104,11 @@ class FanOutCoordinator:
         """Have the coordinator engine dedup/filter the findings and decide an outcome."""
         prompt = self._judge_prompt(context, findings)
         result = engine.run(prompt, effort=effort, model=model)
+        write_transcript(self._transcript_dir, "coordinator", result.raw)
         parsed = _parse_review_result(result.text)
         if parsed is None:
             result = engine.run(prompt + _JUDGE_REPAIR, effort=effort, model=model)
+            write_transcript(self._transcript_dir, "coordinator", result.raw)
             parsed = _parse_review_result(result.text)
             if parsed is None:
                 raise CoordinatorOutputError("coordinator returned invalid review JSON")

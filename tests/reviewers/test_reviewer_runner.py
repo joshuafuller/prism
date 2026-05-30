@@ -41,6 +41,23 @@ def _finding_json(**over: object) -> str:
     return json.dumps([item])
 
 
+class RawEngine:
+    """Engine that returns a raw event stream alongside its findings text."""
+
+    def __init__(self, text: str, raw: str) -> None:
+        self._text = text
+        self._raw = raw
+
+    def run(self, prompt: str, *, effort: Effort, model: str | None = None) -> ParsedResult:
+        return ParsedResult(text=self._text, raw=self._raw)
+
+
+def test_run_reviewer_persists_transcript(tmp_path) -> None:
+    eng = RawEngine("[]", '{"type":"tool_use","name":"Grep"}\n')
+    run_reviewer("code_quality", _CFG, eng, context="ctx", transcript_dir=tmp_path)
+    assert (tmp_path / "code_quality.jsonl").read_text() == '{"type":"tool_use","name":"Grep"}\n'
+
+
 def test_parses_valid_findings() -> None:
     eng = FakeEngine([_finding_json()])
     findings = run_reviewer("security", _CFG, eng, context="ctx")

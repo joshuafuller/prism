@@ -62,6 +62,14 @@ def test_parses_text_and_token_usage(fake_runner, make_proc) -> None:
     assert res.tokens_out == 20
 
 
+def test_run_result_carries_raw_stdout(fake_runner, make_proc) -> None:
+    # The raw CLI output must survive on the result so it can be persisted for inspection
+    # (tool_use events, thinking) rather than being discarded after parsing.
+    stdout = json.dumps({"text": "hi", "in": 1, "out": 2, "finish": "stop"})
+    res = DummyEngine(runner=fake_runner([make_proc(stdout)])).run("p")
+    assert res.raw == stdout
+
+
 def test_truncation_retries_once_then_returns_full(fake_runner, make_proc) -> None:
     r = fake_runner([_ok(make_proc, text="cut", finish="length"), _ok(make_proc, text="full")])
     res = DummyEngine(runner=r).run("p")

@@ -8,6 +8,7 @@ is asked once more for clean JSON before giving up.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from pydantic import ValidationError
 
@@ -16,6 +17,7 @@ from prism.engines.base import Engine
 from prism.findings import Finding
 from prism.jsonio import extract_json_array, strip_code_fence
 from prism.prompts import build_prompt
+from prism.transcripts import write_transcript
 
 _REPAIR_SUFFIX = (
     "\n\nYour previous reply was not valid JSON. "
@@ -61,13 +63,20 @@ def run_reviewer(
     context: str,
     *,
     model: str | None = None,
+    transcript_dir: Path | str | None = None,
 ) -> list[Finding]:
-    """Build the prompt, run the engine, and return validated findings (one repair retry)."""
+    """Build the prompt, run the engine, and return validated findings (one repair retry).
+
+    When ``transcript_dir`` is set, each invocation's raw event stream is persisted to
+    ``<transcript_dir>/<name>.jsonl`` for later inspection.
+    """
     prompt = build_prompt(name, context)
     result = engine.run(prompt, effort=reviewer.effort, model=model)
+    write_transcript(transcript_dir, name, result.raw)
     findings = _parse_findings(result.text, name)
     if findings is None:
         result = engine.run(prompt + _REPAIR_SUFFIX, effort=reviewer.effort, model=model)
+        write_transcript(transcript_dir, name, result.raw)
         findings = _parse_findings(result.text, name)
         if findings is None:
             raise ReviewerOutputError(f"reviewer {name!r} returned invalid findings JSON")

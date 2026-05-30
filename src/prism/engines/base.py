@@ -21,7 +21,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import IO, Protocol
 
@@ -44,6 +44,7 @@ class ParsedResult:
     tokens_in: int = 0
     tokens_out: int = 0
     finish_reason: str | None = None
+    raw: str = ""  # unparsed CLI stdout (JSONL), kept so a run can be inspected later
 
 
 @dataclass(frozen=True, slots=True)
@@ -234,7 +235,7 @@ class Engine(ABC):
         except TimeoutError as exc:
             raise EngineTimeout(f"{self.name} timed out (inactivity/overall limit)") from exc
         self._raise_for_status(proc)
-        result = self._parse(proc.stdout)
+        result = replace(self._parse(proc.stdout), raw=proc.stdout)
         self.tokens_in += result.tokens_in
         self.tokens_out += result.tokens_out
         return result

@@ -112,7 +112,12 @@ def run_local_review(
     if missing:
         raise ValueError(f"missing reviewer prompt(s): {missing} — add agents/<name>.md for each")
 
-    coordinator = FanOutCoordinator(per_reviewer_timeout=config.overall_timeout)
+    # Persist each reviewer + coordinator raw event stream under .prism/runs/ so a review
+    # can be inspected after the fact (tool_use, thinking) — prism-zga.
+    runs_dir = Path(repo) / ".prism" / "runs"
+    coordinator = FanOutCoordinator(
+        per_reviewer_timeout=config.overall_timeout, transcript_dir=runs_dir
+    )
     fanout = coordinator.gather_findings(jobs, context)
     skipped = tier_skipped + fanout.skipped
     failed_names = {name for name, _ in fanout.skipped}
