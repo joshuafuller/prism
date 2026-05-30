@@ -119,40 +119,35 @@ Exit code is nonzero only when the decision matches your `policy.fail_on`
 
 ### Example review
 
-An illustrative review — the output format is exactly what Prism writes to `report.md`;
-the diff under review is fictional. Note how independent reviewers each flag their own
-domain, the verdict blocks on the critical finding, and the coordinator drops a nitpick:
+An illustrative review (the diff is fictional; the structure is what Prism produces).
+Independent reviewers each flag their own domain, the verdict blocks on the critical
+finding, and the coordinator drops a nitpick:
 
-```markdown
-# Prism review: significant_concerns
-
-This change adds a public order-search endpoint. The security reviewer found a
-SQL-injection vector reachable without authentication — that blocks merge. Performance
-flagged an N+1 query that will degrade under load. A code-quality note about naming was
-dropped as not worth flagging.
-
-## Critical (1)
-- **SQL injection in order search** — `api/orders.py:42` (security, high confidence)
-  - The handler formats the user-supplied `q` parameter straight into the query
-    (`f"... WHERE name LIKE '%{q}%'"`). `q=%' OR '1'='1` returns every row, and the route
-    has no auth check, so anyone can reach it.
-  - _Fix:_ Use a parameterized query — `cursor.execute(sql, (f"%{q}%",))` — and never
-    interpolate user input into SQL.
-
-## Warning (1)
-- **N+1 query loads each customer in a loop** — `api/orders.py:55` (performance, medium confidence)
-  - For every order in the page the handler issues a separate `Customer.get(id)` query,
-    so a 200-row response fires 201 queries. Fine in dev; falls over under load.
-  - _Fix:_ Load customers in one `IN (...)` query (or eager-load the relation) and map
-    them in memory.
-
----
-_Prism is an AI first-pass, **not a replacement for human review**. It can miss
-architectural intent, cross-system impact, and subtle concurrency bugs._
-```
+> ### Prism review: `significant_concerns`
+>
+> This change adds a public order-search endpoint. The security reviewer found a
+> SQL-injection vector reachable without authentication — that blocks merge. Performance
+> flagged an N+1 query that will degrade under load. A code-quality note about naming was
+> dropped as not worth flagging.
+>
+> **Critical (1)**
+>
+> - **SQL injection in order search** — `api/orders.py:42` _(security, high confidence)_
+>   - The handler formats the user-supplied `q` straight into the query (`... WHERE name LIKE '%{q}%'`). A value like `%' OR '1'='1` returns every row, and the route has no auth check, so anyone can reach it.
+>   - **Fix:** use a parameterized query — `cursor.execute(sql, (f"%{q}%",))` — and never interpolate user input into SQL.
+>
+> **Warning (1)**
+>
+> - **N+1 query loads each customer in a loop** — `api/orders.py:55` _(performance, medium confidence)_
+>   - For every order in the page the handler issues a separate `Customer.get(id)` query, so a 200-row response fires 201 queries. Fine in dev; falls over under load.
+>   - **Fix:** load customers in one `IN (...)` query (or eager-load the relation) and map them in memory.
+>
+> ---
+>
+> _Prism is an AI first-pass, **not a replacement for human review** — it can miss architectural intent, cross-system impact, and subtle concurrency bugs._
 
 Prism also dogfoods on itself — during development it caught real bugs in its own code,
-including one in the change that added these example transcripts.
+including one in the change that added the example transcripts.
 
 ## Add your own reviewer
 
