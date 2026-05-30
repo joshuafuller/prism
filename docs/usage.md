@@ -41,6 +41,17 @@ existing logins while your real host credentials stay untouched, so a prompt-inj
 reviewer can't tamper with them. The copy is deleted on exit. Subscriptions work inside
 the container with **no API key in the environment** (see [ADR-0002](adr/)).
 
+**Docker Compose** — a familiar build/run wrapper:
+
+```bash
+docker compose build                                  # build the image
+docker compose run --rm prism local --target main     # review (args go after the service)
+# If your host UID isn't 1000:  APP_UID=$(id -u) docker compose build
+```
+
+Compose bind-mounts your real credential directories. For the hardened throwaway-copy
+isolation, prefer `bin/prism` (above). See `docker-compose.yml` for the security note.
+
 **Local (host Python)** — if you have the CLIs plus [uv](https://docs.astral.sh/uv/):
 
 ```bash
@@ -104,6 +115,38 @@ overall_timeout: 1500         # generous backstop cap per reviewer
 The shipped reviewers are `code_quality`, `security`, and `performance`. `documentation`
 and `release` reviewers also exist — uncomment them in `prism.example.yaml` to enable. To
 write your own, see [Add your own reviewer](../README.md#add-your-own-reviewer).
+
+### Choosing engines: Claude vs Codex
+
+Prism picks an engine **per reviewer** (and for the coordinator) via the `engine:` field —
+that's how you decide who runs what. Every `engine` must be defined in the `engines:` block
+and backed by a CLI you're logged into.
+
+- **You have both subscriptions** (the default example): spread reviewers across
+  `claude-cli` and `codex-cli`. Two providers halves the rate-limit pressure on either, and
+  gives the security reviewer a second model's perspective.
+- **You have only one** (Claude *or* Codex): point every reviewer **and** the coordinator at
+  that one engine, and drop the other engine block. Claude-only example:
+
+  ```yaml
+  engines:
+    claude-cli:
+      kind: claude-cli
+  reviewers:
+    code_quality: { engine: claude-cli, effort: medium }
+    security:     { engine: claude-cli, effort: high }
+    performance:  { engine: claude-cli, effort: medium }
+  coordinator:
+    engine: claude-cli
+    effort: high
+  ```
+
+  (For Codex-only, swap every `claude-cli` for `codex-cli`.)
+
+> The **coordinator** is the judge — give it your strongest engine and effort. If a
+> reviewer's engine isn't logged in, that reviewer is **skipped with a recorded reason** and
+> the review still completes — so a missing second subscription degrades gracefully instead
+> of failing the run.
 
 ## Run a review
 

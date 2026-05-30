@@ -1,6 +1,11 @@
 # Prism configuration. Copy to prism.yaml and edit.
 # Model versions are NOT hardcoded: the CLI engines use your subscription's current
 # default. `effort` is the per-reviewer reasoning knob (ADR-0006).
+#
+# Picking Claude vs Codex: each reviewer (and the coordinator) names an `engine` below.
+# This example spreads work across BOTH subscriptions. If you only have one, point every
+# `engine` at that one CLI and delete the other engine block. See docs/usage.md
+# ("Choosing engines: Claude vs Codex").
 
 engines:
   claude-cli:

@@ -1,0 +1,30 @@
+# Docker Compose for Prism — a convenient way to build and run.
+#
+#   docker compose build                                  # build the image
+#   docker compose run --rm prism local --target main     # review current branch vs main
+#
+# Reviews are one-shot, so use `run --rm` (not `up`). Pass any prism args after the
+# service name; they are appended to the entrypoint.
+#
+# If your host UID is not 1000, build so the container user can read your mounted
+# credentials:   APP_UID=$(id -u) docker compose build
+#
+# SECURITY: this service bind-mounts your REAL Claude/Codex credentials so the CLIs can
+# authenticate. For hardened isolation — a throwaway *copy* of your credentials that a
+# prompt-injected reviewer cannot tamper with — prefer ./bin/prism, the recommended
+# runner. See docs/usage.md.
+services:
+  prism:
+    build:
+      context: .
+      args:
+        APP_UID: ${APP_UID:-1000}
+    image: prism
+    working_dir: /repo
+    volumes:
+      - .:/repo
+      - ${HOME}/.claude:/home/app/.claude
+      - ${HOME}/.codex:/home/app/.codex
+      - ${HOME}/.config/gh:/home/app/.config/gh
+      # The claude CLI may also keep state in ~/.claude.json. If you have it, mount it:
+      # - ${HOME}/.claude.json:/home/app/.claude.json

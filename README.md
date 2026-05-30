@@ -102,6 +102,10 @@ docker build -t prism .              # build the image (once)
 bin/prism local --target main        # review the current branch against main
 ```
 
+The image is a multistage [Chainguard wolfi](https://www.chainguard.dev/) build —
+~1.1 GB with **zero known CVEs**. Prefer `docker compose`? `docker compose run --rm prism
+local --target main` works too (see the [Usage Guide](docs/usage.md#install)).
+
 Prism writes the verdict to two files:
 
 - **`.prism/report.md`** — the human-readable review (like the [example](#example-review) below)
