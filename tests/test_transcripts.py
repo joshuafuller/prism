@@ -14,6 +14,15 @@ def test_appends_successive_invocations(tmp_path: Path) -> None:
     assert (tmp_path / "coordinator.jsonl").read_text() == "first\nsecond\n"
 
 
+def test_append_terminates_line_boundary(tmp_path: Path) -> None:
+    # When the repair-retry path appends a second stream and the first did not end in a
+    # newline, the boundary must not fuse two JSON objects onto one line.
+    write_transcript(tmp_path, "coordinator", '{"a":1}')  # no trailing newline
+    write_transcript(tmp_path, "coordinator", '{"b":2}\n')
+    lines = (tmp_path / "coordinator.jsonl").read_text().splitlines()
+    assert lines == ['{"a":1}', '{"b":2}']  # two valid lines, not one fused line
+
+
 def test_empty_raw_writes_nothing(tmp_path: Path) -> None:
     write_transcript(tmp_path, "security", "")
     assert not (tmp_path / "security.jsonl").exists()

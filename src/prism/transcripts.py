@@ -22,6 +22,8 @@ def write_transcript(run_dir: Path | str | None, label: str, raw: str) -> None:
         target = Path(run_dir)
         target.mkdir(parents=True, exist_ok=True)
         with (target / f"{label}.jsonl").open("a", encoding="utf-8") as handle:
-            handle.write(raw)
+            # Terminate each append so a stream without a trailing newline can't fuse its
+            # last JSON object onto the next append's first line (keeps every line valid).
+            handle.write(raw if raw.endswith("\n") else raw + "\n")
     except Exception:
         pass

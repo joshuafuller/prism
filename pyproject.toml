@@ -5,6 +5,8 @@ description = "AI code review orchestration driven by Claude/Codex subscription 
 authors = [
     { name = "Joshua Fuller", email = "joshuafuller@gmail.com" }
 ]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.13.4",

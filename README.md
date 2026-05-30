@@ -18,8 +18,8 @@ Prism splits a diff into specialized reviewer "wavelengths" (security, code qual
 runs them concurrently, and recombines their findings through a coordinator that
 deduplicates, filters false positives, and produces one structured verdict. It's modeled
 on [Cloudflare's AI code review architecture](https://blog.cloudflare.com/ai-code-review/),
-adapted to drive the `claude` and `codex` CLIs, so reviews run on subscriptions you
-already pay for rather than metered per-token API billing.
+adapted to drive the `claude` and `codex` CLIs so reviews run on subscriptions you
+already pay for.
 
 > **Status: working MVP.** `prism local` reviews a diff end-to-end on your subscriptions,
 > in Docker or locally, and posts to a GitHub PR. It even reviews its own repo — Prism
@@ -70,12 +70,25 @@ flowchart LR
   CLI uses your subscription's current model (Opus 4.8 today).
 - **Reasoning effort** is a per-reviewer knob (cheap reviewers run low, the coordinator
   runs high) — on a subscription, tokens are your rate-limit budget.
-- **Reviewer prompts are markdown** (`agents/*.md` + a shared rules file). Add or tune a
-  reviewer by editing markdown — no core code change.
+- **Reviewer prompts are markdown** (`src/prism/agents/*.md` + a shared rules file). Add
+  or tune a reviewer by editing markdown — no core code change.
 
 See the [design spec](docs/superpowers/specs/2026-05-29-prism-mvp-design.md), the
 [architecture decisions](docs/adr/), and the
 [lessons we built on](docs/reference/cloudflare-lessons.md).
+
+## Requirements
+
+Prism drives CLIs you log into with your existing subscriptions — it does not ship a
+model. You need:
+
+- A **Claude subscription** (e.g. Max) with the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code)
+  installed and logged in, and/or a **ChatGPT/Codex subscription** with the `codex` CLI.
+  (API keys work too as an opt-in fallback, but the point is to avoid per-token billing.)
+- [`gh`](https://cli.github.com/) authenticated, if you want to post to a GitHub PR
+  (`glab` for GitLab).
+- **Docker** (recommended path) — or Python 3.12 + [uv](https://docs.astral.sh/uv/) to run
+  on the host.
 
 ## Running it
 
@@ -104,14 +117,41 @@ uv run prism local --target main --config prism.example.yaml
 Exit code is nonzero only when the decision matches your `policy.fail_on`
 (default `significant_concerns`), so it drops cleanly into CI.
 
+### Example review
+
+Prism dogfoods on itself. Here's a (trimmed) real `report.md` from Prism reviewing one of
+its own commits — the coordinator read the source to verify before deciding:
+
+```markdown
+# Prism review: approved_with_comments
+
+The change cleanly adds a fire-and-forget transcript writer, well covered by TDD.
+Two grounded quality issues are worth noting. A path-traversal-via-label finding was
+dropped: labels come from the trusted fixed reviewer set, not untrusted input.
+
+## Warning (2)
+- Repair-retry appends can fuse JSONL line boundaries — src/prism/transcripts.py:25
+  (code_quality, medium confidence)
+  If the first stream does not end in a newline, its last line and the next stream's
+  first line concatenate into one malformed line — defeating the module's own invariant
+  that every line is independently valid.
+  Fix: write `raw if raw.endswith("\n") else raw + "\n"` so each append terminates.
+...
+```
+
+It caught a real bug in its own newly-added code (the JSONL boundary fusion above), which
+is exactly the kind of thing a fast first pass should catch.
+
 ## Add your own reviewer
 
 Reviewers are markdown, not code (ADR-0009):
 
-1. Write `agents/<name>.md` with `## What to Flag` / `## What NOT to Flag` sections.
+1. Write `src/prism/agents/<name>.md` with `## What to Flag` / `## What NOT to Flag`
+   sections (copy an existing one like `security.md`).
 2. Add it to `prism.yaml` under `reviewers:` with an `engine` and `effort`.
 
-That's it — no core code change.
+That's it — no core code change. The shipped set is `security`, `code_quality`, and
+`performance`, plus optional `documentation` and `release` reviewers you can enable.
 
 ## Developing
 
@@ -125,8 +165,10 @@ uv run ruff check .    # lint
 uv run mypy src        # types
 ```
 
-A **pre-commit lint hook is enforced** (`git config core.hooksPath .githooks`); CI runs
-ruff, mypy, pytest, and semgrep. Quality gates fail fast.
+A **pre-commit lint hook is enforced** (`git config core.hooksPath .githooks`) and a
+pre-push hook runs the full gate locally. The GitHub Actions workflow runs ruff, mypy,
+pytest, and semgrep; its `push`/`pull_request` triggers are enabled once the repo is
+public (free Actions). Quality gates fail fast.
 
 ## Work tracking
 
@@ -148,4 +190,5 @@ that catches real bugs and clears clean code — not a gate you stop thinking be
 
 ## License
 
-TBD.
+[Apache License 2.0](LICENSE) — permissive, with an explicit patent grant. Use it,
+modify it, embed it; just keep the notice. See [`NOTICE`](NOTICE).
