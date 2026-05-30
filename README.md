@@ -119,28 +119,40 @@ Exit code is nonzero only when the decision matches your `policy.fail_on`
 
 ### Example review
 
-Prism dogfoods on itself. Here's a (trimmed) real `report.md` from Prism reviewing one of
-its own commits — the coordinator read the source to verify before deciding:
+An illustrative review — the output format is exactly what Prism writes to `report.md`;
+the diff under review is fictional. Note how independent reviewers each flag their own
+domain, the verdict blocks on the critical finding, and the coordinator drops a nitpick:
 
 ```markdown
-# Prism review: approved_with_comments
+# Prism review: significant_concerns
 
-The change cleanly adds a fire-and-forget transcript writer, well covered by TDD.
-Two grounded quality issues are worth noting. A path-traversal-via-label finding was
-dropped: labels come from the trusted fixed reviewer set, not untrusted input.
+This change adds a public order-search endpoint. The security reviewer found a
+SQL-injection vector reachable without authentication — that blocks merge. Performance
+flagged an N+1 query that will degrade under load. A code-quality note about naming was
+dropped as not worth flagging.
 
-## Warning (2)
-- Repair-retry appends can fuse JSONL line boundaries — src/prism/transcripts.py:25
-  (code_quality, medium confidence)
-  If the first stream does not end in a newline, its last line and the next stream's
-  first line concatenate into one malformed line — defeating the module's own invariant
-  that every line is independently valid.
-  Fix: write `raw if raw.endswith("\n") else raw + "\n"` so each append terminates.
-...
+## Critical (1)
+- **SQL injection in order search** — `api/orders.py:42` (security, high confidence)
+  - The handler formats the user-supplied `q` parameter straight into the query
+    (`f"... WHERE name LIKE '%{q}%'"`). `q=%' OR '1'='1` returns every row, and the route
+    has no auth check, so anyone can reach it.
+  - _Fix:_ Use a parameterized query — `cursor.execute(sql, (f"%{q}%",))` — and never
+    interpolate user input into SQL.
+
+## Warning (1)
+- **N+1 query loads each customer in a loop** — `api/orders.py:55` (performance, medium confidence)
+  - For every order in the page the handler issues a separate `Customer.get(id)` query,
+    so a 200-row response fires 201 queries. Fine in dev; falls over under load.
+  - _Fix:_ Load customers in one `IN (...)` query (or eager-load the relation) and map
+    them in memory.
+
+---
+_Prism is an AI first-pass, **not a replacement for human review**. It can miss
+architectural intent, cross-system impact, and subtle concurrency bugs._
 ```
 
-It caught a real bug in its own newly-added code (the JSONL boundary fusion above), which
-is exactly the kind of thing a fast first pass should catch.
+Prism also dogfoods on itself — during development it caught real bugs in its own code,
+including one in the change that added these example transcripts.
 
 ## Add your own reviewer
 
