@@ -1,0 +1,13 @@
+# Prism gitleaks config.
+# The live-test fixtures under tests/live/ intentionally plant fake secrets to verify
+# that Prism's security reviewer flags them. These are not real credentials.
+title = "prism gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Planted fake secrets in live-test fixtures (not real credentials)"
+paths = [
+  '''tests/live/.*''',
+]
