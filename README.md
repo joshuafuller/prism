@@ -21,10 +21,11 @@ on [Cloudflare's AI code review architecture](https://blog.cloudflare.com/ai-cod
 adapted to drive the `claude` and `codex` CLIs so reviews run on subscriptions you
 already pay for.
 
-> **Status: working MVP.** `prism local` reviews a diff end-to-end on your subscriptions,
-> in Docker or locally, and posts to a GitHub PR. It even reviews its own repo — Prism
-> caught real issues in its own Docker wrapper during development. Roadmap and remaining
-> work live in [beads](#work-tracking) and the
+> [!NOTE]
+> **Working MVP.** `prism local` reviews a diff end-to-end on your subscriptions, in
+> Docker or locally, and posts to a GitHub PR. It even reviews its own repo — Prism caught
+> real issues in its own Docker wrapper during development. Roadmap and remaining work live
+> in [GitHub Issues](https://github.com/joshuafuller/prism/issues) and the
 > [implementation plan](docs/superpowers/plans/2026-05-29-prism-mvp.md).
 
 ## Why it exists
@@ -79,43 +80,43 @@ See the [design spec](docs/superpowers/specs/2026-05-29-prism-mvp-design.md), th
 
 ## Requirements
 
-Prism drives CLIs you log into with your existing subscriptions — it does not ship a
-model. You need:
+> [!IMPORTANT]
+> Prism does not ship a model. It drives CLIs you authenticate with your **own**
+> subscriptions — without a logged-in `claude` and/or `codex` CLI, it has nothing to run.
 
 - A **Claude subscription** (e.g. Max) with the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code)
-  installed and logged in, and/or a **ChatGPT/Codex subscription** with the `codex` CLI.
-  (API keys work too as an opt-in fallback, but the point is to avoid per-token billing.)
-- [`gh`](https://cli.github.com/) authenticated, if you want to post to a GitHub PR
-  (`glab` for GitLab).
-- **Docker** (recommended path) — or Python 3.12 + [uv](https://docs.astral.sh/uv/) to run
-  on the host.
+  logged in, and/or a **ChatGPT/Codex subscription** with the `codex` CLI. (API keys work
+  as an opt-in fallback, but the point is to avoid per-token billing.)
+- [`gh`](https://cli.github.com/) (or `glab` for GitLab) authenticated, to post to a PR/MR.
+- **Docker** (recommended) — or Python 3.12 + [uv](https://docs.astral.sh/uv/) to run on the host.
 
-## Running it
+## Quickstart
 
-Add a `prism.yaml` to your repo (copy `prism.example.yaml`), then:
-
-**In Docker (recommended — no host Python needed):**
+> [!TIP]
+> Use the Docker path — it bundles the `claude`, `codex`, and `gh` CLIs, so you need
+> nothing on your host but Docker and your existing logins.
 
 ```bash
-docker build -t prism .                 # once (use --build-arg APP_UID="$(id -u)" if your uid != 1000)
-bin/prism local --target main           # review your branch vs main → report.md
-bin/prism local --target main --post-pr 42   # also post a summary to GitHub PR #42
-bin/prism local --target main --post-mr 77   # …or to GitLab MR !77 (via glab)
+cp prism.example.yaml prism.yaml     # configure once (see the Usage Guide)
+docker build -t prism .              # build the image (once)
+bin/prism local --target main        # review the current branch against main
 ```
 
-`bin/prism` mounts your repo and a **throwaway copy** of your `~/.claude` / `~/.codex` /
-`~/.config/gh` credentials, so the CLIs authenticate with your existing logins while your
-real host credentials stay untouched (a prompt-injected reviewer can't tamper with them).
-Subscriptions work inside the container with **no API key in the environment** (ADR-0002).
+Prism writes the verdict to two files:
 
-**Locally (if you have the CLIs + uv on the host):**
+- **`.prism/report.md`** — the human-readable review (like the [example](#example-review) below)
+- **`.prism/findings.json`** — the same findings as structured JSON, for CI and AI agents
 
-```bash
-uv run prism local --target main --config prism.example.yaml
-```
+Add `--post-pr 42` (GitHub) or `--post-mr 77` (GitLab) to post the summary to a review
+thread. The exit code is nonzero only when the verdict reaches your `policy.fail_on`, so
+`prism local` drops straight into CI.
 
-Exit code is nonzero only when the decision matches your `policy.fail_on`
-(default `significant_concerns`), so it drops cleanly into CI.
+> [!NOTE]
+> **Read these next.** The README is an overview; the real how-to lives here:
+> - **[Usage Guide](docs/usage.md)** — configuration, the review workflow, reading the
+>   output, CI, and posting to PRs/MRs.
+> - **[Using Prism with AI Agents](docs/ai-agents.md)** — wire Prism in as a self-review
+>   gate for Claude Code, Cursor, or Codex.
 
 ### Example review
 
@@ -177,23 +178,24 @@ pre-push hook runs the full gate locally. The GitHub Actions workflow runs ruff,
 pytest, and semgrep; its `push`/`pull_request` triggers are enabled once the repo is
 public (free Actions). Quality gates fail fast.
 
-## Work tracking
+## Roadmap & contributing
 
-All work — past, present, future — is tracked in [beads](https://github.com/gastownhall/beads) (`bd`):
+Planned work, known issues, and the roadmap live in
+[GitHub Issues](https://github.com/joshuafuller/prism/issues). Bug reports, ideas, and new
+reviewer prompts are welcome. The design rationale is in the
+[spec](docs/superpowers/specs/2026-05-29-prism-mvp-design.md) and
+[ADRs](docs/adr/).
 
-```bash
-bd ready    # what's workable now
-bd list     # open issues
-bd show <id>
-```
+## Limitations
 
-## Limitations (honest)
+> [!CAUTION]
+> Prism is **not** a replacement for human review. Like all AI reviewers it is weak at
+> architectural intent ("why was this designed this way"), cross-system impact (it can
+> flag an API-contract change but can't verify every consumer was updated), and subtle
+> concurrency/race bugs that don't show up in a static diff.
 
-Prism is **not** a replacement for human review. Like all AI reviewers it is weak at:
-architectural intent ("why was this designed this way"), cross-system impact (it can flag
-an API-contract change but can't verify every consumer was updated), and subtle
-concurrency/race bugs that don't show up in a static diff. Treat it as a fast first pass
-that catches real bugs and clears clean code — not a gate you stop thinking behind.
+Treat it as a fast first pass that catches real bugs and clears clean code — not a gate
+you stop thinking behind.
 
 ## License
 
