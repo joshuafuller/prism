@@ -1,14 +1,10 @@
 name: CI
 
-# Auto-triggers are TEMPORARILY disabled: GitHub Actions billing is blocked on this
-# private repo (jobs won't start until a payment method / spending limit is set under
-# Settings -> Billing & plans). Local gates (the .githooks pre-commit lint + `uv run
-# pytest/ruff/mypy`) enforce quality in the meantime.
-# TO RE-ENABLE once billing is fixed: uncomment `push` and `pull_request` below.
 on:
+  push:
+    branches: [master]
+  pull_request:
   workflow_dispatch:
-  # push:
-  # pull_request:
 
 jobs:
   lint:
