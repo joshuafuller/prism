@@ -9,10 +9,12 @@
 # If your host UID is not 1000, build so the container user can read your mounted
 # credentials:   APP_UID=$(id -u) docker compose build
 #
-# SECURITY: this service bind-mounts your REAL Claude/Codex credentials so the CLIs can
-# authenticate. For hardened isolation — a throwaway *copy* of your credentials that a
-# prompt-injected reviewer cannot tamper with — prefer ./bin/prism, the recommended
-# runner. See docs/usage.md.
+# SECURITY: this service bind-mounts your REAL Claude/Codex credential directories
+# read-write. They are read-write because the CLIs write session state and refresh tokens
+# there (read-only would break them) — which also means a prompt-injected reviewer could
+# in principle tamper with your host credentials. The hardened alternative, ./bin/prism,
+# instead mounts a throwaway *copy* that is discarded on exit. Prefer bin/prism; this
+# compose path is the convenient, less-isolated option. See docs/usage.md.
 services:
   prism:
     build:

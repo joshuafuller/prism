@@ -27,19 +27,24 @@ gh auth login     # (optional) to post to GitHub PRs; glab for GitLab
 
 Then pick a runtime.
 
-**Docker (recommended)** — bundles the `claude`, `codex`, and `gh` CLIs; nothing else
-needed on the host:
+**Docker (recommended)** — the image bundles the `claude`, `codex`, and `gh` CLIs, so the
+only host requirements are Docker and your logins. It's a multistage
+[Chainguard wolfi](https://www.chainguard.dev/) build (~1.1 GB, **0 known CVEs** at
+release) containing Python 3.12, Node, the two review CLIs, `gh`, `git`, and `bubblewrap`
+(codex's sandbox). `uv` and build tooling are dropped from the final image.
 
 ```bash
-docker build -t prism .
-# If your host UID isn't 1000, build with: --build-arg APP_UID="$(id -u)"
+docker build -t prism .                  # build once
+# Non-default host UID? add:  --build-arg APP_UID="$(id -u)"
+bin/prism local --target main            # run a review
 ```
 
-`bin/prism` mounts your repo at `/repo` and mounts a **throwaway copy** of your
-`~/.claude`, `~/.codex`, and `~/.config/gh` credentials — the CLIs authenticate with your
-existing logins while your real host credentials stay untouched, so a prompt-injected
-reviewer can't tamper with them. The copy is deleted on exit. Subscriptions work inside
-the container with **no API key in the environment** (see [ADR-0002](adr/)).
+`bin/prism` is the **recommended runner**. It mounts your repo at `/repo` and a
+**throwaway copy** of your `~/.claude`, `~/.codex`, and `~/.config/gh` credentials — the
+CLIs authenticate with your existing logins while your real host credentials stay
+untouched (a prompt-injected reviewer can't tamper with them), and the copy is deleted on
+exit. Subscriptions work inside the container with **no API key in the environment** (see
+[ADR-0002](adr/)).
 
 **Docker Compose** — a familiar build/run wrapper:
 
@@ -66,6 +71,10 @@ Copy the example and edit:
 ```bash
 cp prism.example.yaml prism.yaml
 ```
+
+`prism.yaml` is your local config — Prism's own repo gitignores it, so copying it here
+never dirties the tree. In *your* project, commit it if you want your team to share one
+config.
 
 A config has four parts:
 

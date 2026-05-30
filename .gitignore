@@ -1,4 +1,6 @@
 .prism/
+# User's local config (copied from prism.example.yaml); never commit it to this repo.
+prism.yaml
 __pycache__/
 *.pyc
 .venv/
